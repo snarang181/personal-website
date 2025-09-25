@@ -41,18 +41,40 @@
             justify-content: space-between;
             align-items: center;
             padding: 1rem 0;
+            position: relative;
         }
 
         .logo {
             font-size: 1.5rem;
             font-weight: bold;
             color: #66ccff;
+            z-index: 1001;
         }
 
+        /* Mobile menu toggle button */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #f8f8f2;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            z-index: 1001;
+            transition: color 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            color: #66ccff;
+        }
+
+        /* Navigation menu */
         nav ul {
             display: flex;
             list-style: none;
             gap: 2rem;
+            margin: 0;
+            padding: 0;
         }
 
         nav a {
@@ -60,10 +82,92 @@
             color: #f8f8f2;
             font-weight: 500;
             transition: color 0.3s;
+            padding: 0.5rem 0;
         }
 
         nav a:hover {
             color: #66ccff;
+        }
+
+        /* Mobile Navigation Styles */
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+
+            nav ul {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 280px;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.98);
+                backdrop-filter: blur(15px);
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 2rem;
+                transition: right 0.3s ease-in-out;
+                border-left: 1px solid rgba(102, 204, 255, 0.3);
+                box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
+            }
+
+            nav ul.active {
+                right: 0;
+            }
+
+            nav ul li {
+                opacity: 0;
+                transform: translateX(50px);
+                transition: all 0.3s ease;
+            }
+
+            nav ul.active li {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            /* Stagger animation for menu items */
+            nav ul.active li:nth-child(1) { transition-delay: 0.1s; }
+            nav ul.active li:nth-child(2) { transition-delay: 0.2s; }
+            nav ul.active li:nth-child(3) { transition-delay: 0.3s; }
+            nav ul.active li:nth-child(4) { transition-delay: 0.4s; }
+            nav ul.active li:nth-child(5) { transition-delay: 0.5s; }
+
+            nav a {
+                font-size: 1.2rem;
+                padding: 1rem 2rem;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+                width: 200px;
+                text-align: center;
+                border: 1px solid transparent;
+            }
+
+            nav a:hover {
+                background: rgba(102, 204, 255, 0.1);
+                border-color: rgba(102, 204, 255, 0.3);
+                color: #66ccff;
+            }
+
+            /* Overlay for mobile menu */
+            .menu-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                z-index: 999;
+            }
+
+            .menu-overlay.active {
+                opacity: 1;
+                visibility: visible;
+            }
         }
 
         /* Hero Section */
@@ -402,12 +506,60 @@
                 align-items: center;
             }
 
-            nav ul {
-                gap: 1rem;
-            }
-
             .projects-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .contact-info {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .contact-info a {
+                margin: 0;
+            }
+
+            /* Mobile-specific touch targets */
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 15px;
+            }
+
+            .hero-content h1 {
+                font-size: 2rem;
+            }
+
+            .hero-content p {
+                font-size: 1.1rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .experience-item,
+            .education-item,
+            .project-card {
+                padding: 1.5rem;
+            }
+
+            nav ul {
+                width: 100%;
+                right: -100%;
             }
         }
 
@@ -420,13 +572,24 @@
         section:not(.hero) {
             scroll-margin-top: 80px;
         }
+
+        /* Prevent body scroll when menu is open */
+        body.menu-open {
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
+    <!-- Mobile menu overlay -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
     <header>
         <nav class="container">
             <div class="logo">Samarth Narang</div>
-            <ul>
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <span id="menuIcon">☰</span>
+            </button>
+            <ul id="navMenu">
                 <li><a href="#about">About</a></li>
                 <li><a href="#experience">Experience</a></li>
                 <li><a href="#education">Education</a></li>
@@ -647,55 +810,22 @@
                         <h3>Proficient</h3>
                         <div class="skill-tags">
                             <span class="skill-tag">C</span>
-                            <span class="skill-tag">Assembly</span>
                             <span class="skill-tag">C++</span>
-                            <span class="skill-tag">RISC-V</span>
                             <span class="skill-tag">Python</span>
-                            <span class="skill-tag">Flutter</span>
+                            <span class="skill-tag">MLIR</span>
+                            <span class="skill-tag">LLVM</span>
+                            <span class="skill-tag">PyTorch</span>
+                            <span class="skill-tag">Assembly</span>
                             <span class="skill-tag">Git</span>
                             <span class="skill-tag">Unix</span>
-                            <span class="skill-tag">JavaScript</span>
-                            <span class="skill-tag">HTML/CSS</span>
+                            <span class="skill-tag">Flutter</span>
                         </div>
                     </div>
                     <div class="skill-category">
                         <h3>Familiar</h3>
                         <div class="skill-tags">
                             <span class="skill-tag">Java</span>
+                            <span class="skill-tag">RISC-V ISA</span>
                             <span class="skill-tag">SQL</span>
+                            <span class="skill-tag">TensorFlow</span>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 Samarth Narang. All rights reserved.</p>
-        </div>
-    </footer>
-
-    <script>
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
-
-        // Add scroll effect to header
-        window.addEventListener('scroll', function() {
-            const header = document.querySelector('header');
-            if (window.scrollY > 100) {
-                header.style.background = 'rgba(0, 0, 0, 0.98)';
-            } else {
-                header.style.background = 'rgba(0, 0, 0, 0.95)';
-            }
-        });
-    </script>
-</body>
-</html>
