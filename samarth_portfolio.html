@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samarth Narang - ML Compiler Engineer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #f8f8f2;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #111111 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid rgba(102, 204, 255, 0.3);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #66ccff;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #f8f8f2;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #66ccff;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: white;
+            position: relative;
+            background: linear-gradient(135deg, #000000 0%, #0a0a0a 30%, #111111 70%, #1a1a1a 100%);
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            opacity: 0;
+            animation: fadeInUp 1s ease forwards;
+        }
+
+        .hero-content p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            animation: fadeInUp 1s ease 0.2s forwards;
+        }
+
+        .contact-info {
+            margin-bottom: 2rem;
+            opacity: 0;
+            animation: fadeInUp 1s ease 0.4s forwards;
+        }
+
+        .contact-info a {
+            color: white;
+            text-decoration: none;
+            margin: 0 1rem;
+            transition: opacity 0.3s;
+        }
+
+        .contact-info a:hover {
+            opacity: 0.8;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            opacity: 0;
+            animation: fadeInUp 1s ease 0.6s forwards;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #66ccff;
+            color: #000000;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #66ccff;
+            border: 2px solid #66ccff;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Main Content */
+        main {
+            background: #000000;
+        }
+
+        section {
+            padding: 5rem 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #f8f8f2;
+        }
+
+        /* Experience Section */
+        .experience-item {
+            background: rgba(17, 17, 17, 0.8);
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #66ccff;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(102, 204, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .experience-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 10px 30px rgba(102, 204, 255, 0.2);
+            border-color: rgba(102, 204, 255, 0.4);
+            background: rgba(17, 17, 17, 0.9);
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .job-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #f8f8f2;
+        }
+
+        .company {
+            font-size: 1.1rem;
+            color: #32ff82;
+            font-weight: 600;
+        }
+
+        .duration {
+            color: #999999;
+            font-style: italic;
+        }
+
+        .job-description {
+            margin-top: 1rem;
+            color: #cccccc;
+        }
+
+        .job-description h4 {
+            color: #32ff82;
+            margin: 1rem 0 0.5rem 0;
+        }
+
+        .job-description ul {
+            margin-left: 1.5rem;
+        }
+
+        .job-description li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Education Section */
+        .education-item {
+            background: rgba(17, 17, 17, 0.8);
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #ff5555;
+            border: 1px solid rgba(255, 85, 85, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .degree {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #f8f8f2;
+        }
+
+        .university {
+            font-size: 1.1rem;
+            color: #ff5555;
+            font-weight: 600;
+        }
+
+        .gpa {
+            color: #32ff82;
+            font-weight: 600;
+        }
+
+        /* Projects Section */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .project-card {
+            background: rgba(17, 17, 17, 0.8);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s;
+            border-top: 4px solid #66ccff;
+            border: 1px solid rgba(102, 204, 255, 0.2);
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 204, 255, 0.3);
+            border-color: rgba(102, 204, 255, 0.4);
+            background: rgba(17, 17, 17, 0.9);
+        }
+
+        .project-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #f8f8f2;
+            margin-bottom: 1rem;
+        }
+
+        .project-links {
+            margin-top: 1rem;
+        }
+
+        .project-links a {
+            color: #66ccff;
+            text-decoration: none;
+            margin-right: 1rem;
+            font-weight: 600;
+        }
+
+        .project-links a:hover {
+            text-decoration: underline;
+        }
+
+        .skills-acquired {
+            background: rgba(102, 204, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid rgba(102, 204, 255, 0.3);
+        }
+
+        .skills-acquired strong {
+            color: #66ccff;
+        }
+
+        /* Skills Section */
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .skill-category {
+            background: rgba(17, 17, 17, 0.8);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(102, 204, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .skill-category h3 {
+            color: #66ccff;
+            margin-bottom: 1rem;
+        }
+
+        .skill-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .skill-tag {
+            background: rgba(102, 204, 255, 0.15);
+            color: #66ccff;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(102, 204, 255, 0.4);
+        }
+
+        /* Publications Section */
+        .publication {
+            background: rgba(17, 17, 17, 0.8);
+            padding: 2rem;
+            border-radius: 10px;
+            border-left: 4px solid #ffb86c;
+            border: 1px solid rgba(255, 184, 108, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .publication h3 {
+            color: #f8f8f2;
+        }
+
+        .publication p {
+            color: #cccccc;
+        }
+
+        .publication strong {
+            color: #ffb86c;
+        }
+
+        /* Footer */
+        footer {
+            background: #000000;
+            color: #666666;
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid rgba(50, 255, 130, 0.2);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .job-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            nav ul {
+                gap: 1rem;
+            }
+
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Section spacing */
+        section:not(.hero) {
+            scroll-margin-top: 80px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <div class="logo">Samarth Narang</div>
+            <ul>
+                <li><a href="#about">About</a></li>
+                <li><a href="#experience">Experience</a></li>
+                <li><a href="#education">Education</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#publications">Publications</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Samarth Narang</h1>
+                <p>ML Compiler Engineer & Software Developer</p>
+                <div class="contact-info">
+                    <a href="tel:+14135123313">+1(413)512-3313</a>
+                    <a href="mailto:samarth.colleges@gmail.com">samarth.colleges@gmail.com</a>
+                    <a href="https://github.com/snarang181" target="_blank">GitHub</a>
+                </div>
+                <div class="cta-buttons">
+                    <a href="#experience" class="btn btn-primary">View My Work</a>
+                    <a href="mailto:samarth.colleges@gmail.com" class="btn btn-outline">Get In Touch</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main>
+        <section id="about">
+            <div class="container">
+                <h2 class="section-title">About Me</h2>
+                <div style="text-align: center; max-width: 800px; margin: 0 auto; font-size: 1.1rem; line-height: 1.8; color: #cccccc;">
+                    <p>I'm a passionate ML Compiler Engineer currently working at Qualcomm, specializing in developing high-performance AI inference solutions for edge devices. With a strong background in compiler construction, machine learning, and systems programming, I focus on optimizing AI workloads for on-device execution.</p>
+                    <br>
+                    <p>Currently pursuing my MS in Computer Science at UT Austin, I combine academic rigor with industry experience to push the boundaries of AI compiler technology.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="experience">
+            <div class="container">
+                <h2 class="section-title">Work Experience</h2>
+
+                <div class="experience-item">
+                    <div class="job-header">
+                        <div>
+                            <div class="job-title">ML Compiler Engineer</div>
+                            <div class="company">Qualcomm</div>
+                        </div>
+                        <div class="duration">January 2024 - Present</div>
+                    </div>
+                    <div class="job-description">
+                        <ul>
+                            <li>Handwriting and benchmarking Triton kernels which are lowered to MLIR and LLVM-IR to perform on-device execution</li>
+                            <li>Working on tiling algorithms used by Qualcomm's proprietary Hexagon NPU Compiler to facilitate on-device AI inference</li>
+                            <li>Periodically handle critical performance issues faced by customers while running LLMs on Qualcomm NSPs</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="experience-item">
+                    <div class="job-header">
+                        <div>
+                            <div class="job-title">Machine Learning Engineer</div>
+                            <div class="company">DeGirum</div>
+                        </div>
+                        <div class="duration">June 2023 - January 2024</div>
+                    </div>
+                    <div class="job-description">
+                        <h4>ML Compiler Backend Development</h4>
+                        <ul>
+                            <li>Collaborated in the development of an AI compiler for DeGirum's hardware accelerator, focusing on performance and extending the reach of compatible models</li>
+                            <li>Implemented SIMD parallelism, vector processing, and pipeline strategies to minimize data movement and memory footprint</li>
+                            <li>Expanded the existing compiler to support Large Language Models (LLMs) through in-depth understanding of Transformer-based architectures</li>
+                            <li>Benchmarked CPU cores using FPGA to offload certain operations in real-time execution of models</li>
+                        </ul>
+                        <h4>ML Deployment Infrastructure</h4>
+                        <ul>
+                            <li>Compiled ML models using the DeGirum compiler and orchestrated their seamless integration within the DeGirum Ecosystem</li>
+                            <li>Leveraged Flask API for robust and efficient integration, ensuring smooth communication between components</li>
+                            <li>Developed comprehensive unit tests utilizing the PyTest framework</li>
+                            <li>Implemented CI/CD pipelines to establish an automated workflow for deployment and testing processes</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="experience-item">
+                    <div class="job-header">
+                        <div>
+                            <div class="job-title">Software Engineering Co-op</div>
+                            <div class="company">DeGirum</div>
+                        </div>
+                        <div class="duration">May 2022 - May 2023</div>
+                    </div>
+                    <div class="job-description">
+                        <h4>Machine Learning Team (08/16/22 - 05/30/23)</h4>
+                        <ul>
+                            <li>Worked extensively with the PyTorch framework to compile deep learning models on company specific compilers</li>
+                            <li>Facilitated Quantization for models from FP32 to UInt8 precision to expand the variety of model choices</li>
+                            <li>Successfully ported 132 models (both quant and float) from the popular timm repository to DeGirum's Model Zoo</li>
+                            <li>Created custom Python modules and packages to facilitate code reuse and maintainability</li>
+                        </ul>
+                        <h4>Embedded SW Team (02/01/22 - 08/15/22)</h4>
+                        <ul>
+                            <li>Built a UART interface monitor using RISC-V Assembly for field engineers as a debug tool</li>
+                            <li>Developed ROM code routines for MBIST operations</li>
+                            <li>Redesigned existing MBIST testing code to decrease test completion time by 40%</li>
+                            <li>Implemented a series of embedded C tests for Pre-Silicon RTL validation</li>
+                            <li>Refactored and expanded functionality of the Verilog Test Bench</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="education">
+            <div class="container">
+                <h2 class="section-title">Education</h2>
+
+                <div class="education-item">
+                    <div class="job-header">
+                        <div>
+                            <div class="degree">Master of Science, Computer Science</div>
+                            <div class="university">University of Texas at Austin</div>
+                        </div>
+                        <div class="duration">August 2024 - August 2025</div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div class="gpa">GPA: 3.94</div>
+                        <p><strong>Relevant Coursework:</strong> Compiler Construction and Implementation of Programming Languages, Virtualization, NLP, Reinforcement Learning, Generative AI in Deep Learning, Optimization</p>
+                    </div>
+                </div>
+
+                <div class="education-item">
+                    <div class="job-header">
+                        <div>
+                            <div class="degree">Bachelor of Science, Computer Science and Mathematics</div>
+                            <div class="university">University of Massachusetts Amherst</div>
+                        </div>
+                        <div class="duration">August 2020 - May 2023</div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div class="gpa">GPA: 3.98</div>
+                        <p><strong>Awards:</strong> Summa Cum Laude Honors, Dean's List (all semesters), Chancellor's Scholarship ($16,000/year)</p>
+                        <p><strong>Relevant Coursework:</strong> Operating Systems, Computer Networking, Computer Systems, Algorithms and Data Structures, Machine Learning, Programming in JavaScript, Regression Analysis</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="publications">
+            <div class="container">
+                <h2 class="section-title">Publications</h2>
+                <div class="publication">
+                    <h3>Tensor Evolution: A Framework for Fast Evaluation of Tensor Computations using Recurrences</h3>
+                    <p><strong>Authors:</strong> Javed Absar, Samarth Narang, Muthu Baskaran</p>
+                    <p><strong>Conference:</strong> 6th Compilers for Machine Learning Workshop, at CGO 2025</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="projects">
+            <div class="container">
+                <h2 class="section-title">Software Projects</h2>
+                <div class="projects-grid">
+
+                    <div class="project-card">
+                        <h3 class="project-title">LLVM Compiler Infrastructure</h3>
+                        <p>Open Source Contributor with several contributions to MLIR, Clang, LLVM Optimizations, and Flang.</p>
+                        <div class="project-links">
+                            <a href="#" target="_blank">View Patches</a>
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <h3 class="project-title">CaptureMyHippo</h3>
+                        <p>A non-conventional social media application that allows users to record their memories for family and loved ones. Built with a serverless architecture using AWS services.</p>
+                        <div class="project-links">
+                            <a href="#" target="_blank">App Store</a>
+                            <a href="#" target="_blank">Google Play</a>
+                        </div>
+                        <div class="skills-acquired">
+                            <strong>Skills:</strong> Flutter, Python, Flask, AWS Lambda, AWS DynamoDB
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <h3 class="project-title">NoFinishLine</h3>
+                        <p>iOS application for tracking workouts and searching an integrated workout database with levels, categories, and instructions. Features a RESTful backend with AWS integration.</p>
+                        <div class="project-links">
+                            <a href="#" target="_blank">GitHub</a>
+                        </div>
+                        <div class="skills-acquired">
+                            <strong>Skills:</strong> Flutter, Python, Flask, AWS Lambda, AWS DynamoDB, Boto3
+                        </div>
+                    </div>
+
+                    <div class="project-card">
+                        <h3 class="project-title">CryptoPriceAlert</h3>
+                        <p>Mobile application for cryptocurrency traders to set price alerts on their favorite assets. Integrates with major trading platforms' APIs for real-time price data.</p>
+                        <div class="skills-acquired">
+                            <strong>Skills:</strong> Flutter, Python, Flask, Firebase
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="skills" style="background: rgba(0, 0, 0, 0.8);">
+            <div class="container">
+                <h2 class="section-title">Technical Skills</h2>
+                <div class="skills-container">
+                    <div class="skill-category">
+                        <h3>Proficient</h3>
+                        <div class="skill-tags">
+                            <span class="skill-tag">C</span>
+                            <span class="skill-tag">Assembly</span>
+                            <span class="skill-tag">C++</span>
+                            <span class="skill-tag">RISC-V</span>
+                            <span class="skill-tag">Python</span>
+                            <span class="skill-tag">Flutter</span>
+                            <span class="skill-tag">Git</span>
+                            <span class="skill-tag">Unix</span>
+                            <span class="skill-tag">JavaScript</span>
+                            <span class="skill-tag">HTML/CSS</span>
+                        </div>
+                    </div>
+                    <div class="skill-category">
+                        <h3>Familiar</h3>
+                        <div class="skill-tags">
+                            <span class="skill-tag">Java</span>
+                            <span class="skill-tag">SQL</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Samarth Narang. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add scroll effect to header
+        window.addEventListener('scroll', function() {
+            const header = document.querySelector('header');
+            if (window.scrollY > 100) {
+                header.style.background = 'rgba(0, 0, 0, 0.98)';
+            } else {
+                header.style.background = 'rgba(0, 0, 0, 0.95)';
+            }
+        });
+    </script>
+</body>
+</html>
