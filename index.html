@@ -162,11 +162,13 @@
                 visibility: hidden;
                 transition: all 0.3s ease;
                 z-index: 999;
+                pointer-events: none;   
             }
 
             .menu-overlay.active {
                 opacity: 1;
                 visibility: visible;
+                pointer-events: auto;
             }
         }
 
@@ -802,7 +804,7 @@
             </div>
         </section>
 
-        <section id="skills" style="background: rgba(0, 0, 0, 0.8);">
+         <section id="skills" style="background: rgba(0, 0, 0, 0.8);">
             <div class="container">
                 <h2 class="section-title">Technical Skills</h2>
                 <div class="skills-container">
@@ -829,3 +831,45 @@
                             <span class="skill-tag">SQL</span>
                             <span class="skill-tag">TensorFlow</span>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Samarth Narang. All rights reserved.</p>
+        </div>
+    </footer>
+    <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const navMenu = document.getElementById('navMenu');
+    const menuOverlay = document.getElementById('menuOverlay');
+
+    menuToggle.addEventListener('click', () => {
+        console.log('Menu toggle clicked');
+        navMenu.classList.toggle('active');
+        menuOverlay.classList.toggle('active');
+        document.body.classList.toggle('menu-open');
+    });
+
+    // Close the menu when overlay is clicked
+    menuOverlay.addEventListener('click', () => {
+        navMenu.classList.remove('active');
+        menuOverlay.classList.remove('active');
+        document.body.classList.remove('menu-open');
+    });
+
+    // Optional: close menu when a link is clicked
+    document.querySelectorAll('#navMenu a').forEach(link => {
+        link.addEventListener('click', () => {
+            navMenu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+            document.body.classList.remove('menu-open');
+        });
+    });
+    </script>
+</body>
+</html>
+
+            
