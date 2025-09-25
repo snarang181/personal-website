@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
             line-height: 1.6;
             color: #f8f8f2;
             background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #111111 100%);
@@ -181,6 +181,23 @@
             color: white;
             position: relative;
             background: linear-gradient(135deg, #000000 0%, #0a0a0a 30%, #111111 70%, #1a1a1a 100%);
+        }
+
+        .hero-layout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+        flex-wrap: wrap; /* stack photo above text on small screens */
+        }
+
+        .hero-photo img {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;       /* makes it circular */
+        object-fit: cover;        /* crop nicely if not square */
+        border: 3px solid #66ccff;/* your accent color */
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
         .hero-content h1 {
@@ -602,7 +619,12 @@
     </header>
 
     <section class="hero">
-        <div class="container">
+        <div class="container hero-layout">
+             <!-- Photo -->
+            <div class="hero-photo">
+                <img src="images/profile-photo.jpg" alt="Samarth Narang" />
+            </div>
+
             <div class="hero-content">
                 <h1>Samarth Narang</h1>
                 <p>ML Compiler Engineer & Software Developer</p>
