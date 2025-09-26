@@ -320,6 +320,13 @@
             font-weight: 600;
         }
 
+        .company-logo {
+            height: 20px;       
+            width: auto;
+            margin-right: 8px;  /* spacing before text */
+            vertical-align: middle;
+        }
+
         .duration {
             color: #999999;
             font-style: italic;
@@ -644,10 +651,22 @@
     <main>
         <section id="about">
             <div class="container">
-                <h2 class="section-title">About Me</h2>
                 <div style="text-align: center; max-width: 800px; margin: 0 auto; font-size: 1.1rem; line-height: 1.8; color: #cccccc;">
-                    <p>I'm a passionate ML Compiler Engineer currently working at Qualcomm, specializing in developing high-performance AI inference solutions for edge devices. With a strong background in compiler construction, machine learning, and systems programming, I focus on optimizing AI workloads for on-device execution.</p>
-                </div>
+      <p>
+        I'm a passionate ML Compiler Engineer currently working at Qualcomm, specializing in developing high-performance AI inference solutions for edge devices. With a strong background in compiler construction, machine learning, and systems programming, I focus on optimizing AI workloads for on-device execution.
+      </p>
+      <br>
+      <p>
+        Outside of work, I like (but fail) to keep life balanced with my hobbies:
+      </p>
+      <ul style="list-style: none; padding: 0; margin: 1rem 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2rem; color: #66ccff; font-weight: 500;">
+        <li>🍜 Major foodie</li>
+        <li>🏋️‍♂️ Regular at the gym</li>
+        <li>✈️ Always planning my next trip</li>
+        <li>⚽ Sports enthusiast (following almost every sport!)</li>
+        <li>♟️ Former competitive chess player</li>
+      </ul>
+    </div>
             </div>
         </section>
 
@@ -657,9 +676,11 @@
 
                 <div class="experience-item">
                     <div class="job-header">
-                        <div>
+                        <div class="job-info">
                             <div class="job-title">ML Compiler Engineer</div>
-                            <div class="company">Qualcomm</div>
+                            <div class="company">
+                                <img src="images/qualcomm-logo.png" alt="Qualcomm" class="company-logo" />
+                                Qualcomm</div>
                         </div>
                         <div class="duration">January 2024 - Present</div>
                     </div>
@@ -675,53 +696,59 @@
 
                 <div class="experience-item">
                     <div class="job-header">
-                        <div>
+                        <div class="job-info">
                             <div class="job-title">Machine Learning Engineer</div>
-                            <div class="company">DeGirum</div>
+                            <div class="company">
+                                <img src="images/degirum-logo.jpeg" alt="DeGirum" class="company-logo" />
+                                <span>DeGirum</span>
+                            </div>
                         </div>
                         <div class="duration">June 2023 - January 2024</div>
                     </div>
                     <div class="job-description">
                         <h4>ML Compiler Backend Development</h4>
                         <ul>
-                            <li>Collaborated in the development of an AI compiler for DeGirum's hardware accelerator, focusing on performance and extending the reach of compatible models</li>
-                            <li>Implemented SIMD parallelism, vector processing, and pipeline strategies to minimize data movement and memory footprint</li>
-                            <li>Expanded the existing compiler to support Large Language Models (LLMs) through in-depth understanding of Transformer-based architectures</li>
-                            <li>Benchmarked CPU cores using FPGA to offload certain operations in real-time execution of models</li>
+                            <li>Collaborated in the development of an AI compiler for DeGirum's hardware accelerator, focusing on performance and extending the reach of compatible models.</li>
+                            <li>Implemented SIMD parallelism, vector processing, and pipeline strategies to minimize data movement and memory footprint.</li>
+                            <li>Expanded the existing compiler to support Large Language Models (LLMs) through in-depth understanding of Transformer-based architectures.</li>
+                            <li>Benchmarked CPU cores using FPGA to offload certain operations in real-time execution of models.</li>
                         </ul>
                         <h4>ML Deployment Infrastructure</h4>
                         <ul>
-                            <li>Compiled ML models using the DeGirum compiler and orchestrated their seamless integration within the DeGirum Ecosystem</li>
-                            <li>Leveraged Flask API for robust and efficient integration, ensuring smooth communication between components</li>
-                            <li>Developed comprehensive unit tests utilizing the PyTest framework</li>
-                            <li>Implemented CI/CD pipelines to establish an automated workflow for deployment and testing processes</li>
+                            <li>Compiled ML models using the DeGirum compiler and orchestrated their seamless integration within the DeGirum Ecosystem.</li>
+                            <li>Leveraged Flask API for robust and efficient integration, ensuring smooth communication between components.</li>
+                            <li>Developed comprehensive unit tests utilizing the PyTest framework.</li>
+                            <li>Implemented CI/CD pipelines to establish an automated workflow for deployment and testing processes.</li>
                         </ul>
                     </div>
                 </div>
 
                 <div class="experience-item">
                     <div class="job-header">
-                        <div>
+                        <div class="job-info">
                             <div class="job-title">Software Engineering Co-op</div>
-                            <div class="company">DeGirum</div>
+                            <div class="company">
+                                <img src="images/degirum-logo.jpeg" alt="DeGirum" class="company-logo" />
+                                <span>DeGirum</span>
+                            </div>
                         </div>
                         <div class="duration">May 2022 - May 2023</div>
                     </div>
                     <div class="job-description">
                         <h4>Machine Learning Team (08/16/22 - 05/30/23)</h4>
                         <ul>
-                            <li>Worked extensively with the PyTorch framework to compile deep learning models on company specific compilers</li>
-                            <li>Facilitated Quantization for models from FP32 to UInt8 precision to expand the variety of model choices</li>
-                            <li>Successfully ported 132 models (both quant and float) from the popular timm repository to DeGirum's Model Zoo</li>
-                            <li>Created custom Python modules and packages to facilitate code reuse and maintainability</li>
+                            <li>Worked extensively with the PyTorch framework to compile deep learning models on company specific compilers.</li>
+                            <li>Facilitated Quantization for models from FP32 to UInt8 precision to expand the variety of model choices.</li>
+                            <li>Successfully ported 132 models (both quant and float) from the popular timm repository to DeGirum's Model Zoo.</li>
+                            <li>Created custom Python modules and packages to facilitate code reuse and maintainability.</li>
                         </ul>
                         <h4>Embedded SW Team (02/01/22 - 08/15/22)</h4>
                         <ul>
-                            <li>Built a UART interface monitor using RISC-V Assembly for field engineers as a debug tool</li>
-                            <li>Developed ROM code routines for MBIST operations</li>
-                            <li>Redesigned existing MBIST testing code to decrease test completion time by 40%</li>
-                            <li>Implemented a series of embedded C tests for Pre-Silicon RTL validation</li>
-                            <li>Refactored and expanded functionality of the Verilog Test Bench</li>
+                            <li>Built a UART interface monitor using RISC-V Assembly for field engineers as a debug tool.</li>
+                            <li>Developed ROM code routines for MBIST operations.</li>
+                            <li>Redesigned existing MBIST testing code to decrease test completion time by 40%.</li>
+                            <li>Implemented a series of embedded C tests for Pre-Silicon RTL validation.</li>
+                            <li>Refactored and expanded functionality of the Verilog Test Bench.</li>
                         </ul>
                     </div>
                 </div>
@@ -861,7 +888,7 @@
     </main>
     <footer>
         <div class="container">
-            <p>&copy; 2024 Samarth Narang. All rights reserved.</p>
+            <p>&copy; 2025 Samarth Narang. All rights reserved.</p>
         </div>
     </footer>
     <script>
