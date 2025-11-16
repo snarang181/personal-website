@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/tiled-thoughts/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=tiled-thoughts/livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Numerical-Stability | Tiled Thoughts: A Verbose Debug Build</title>
+<meta name="keywords" content="">
+<meta name="description" content="Compiler passes, ML systems, and life — debug logs from the path between code and silicon.">
+<meta name="author" content="Samarth Narang">
+<link rel="canonical" href="http://localhost:1313/tiled-thoughts/tags/numerical-stability/">
+<link crossorigin="anonymous" href="/tiled-thoughts/assets/css/stylesheet.343cc480b9ffc8f04ccbe5e968ad674880cab773ec19905e93033065c1e7a804.css" integrity="sha256-NDzEgLn/yPBMy&#43;XpaK1nSIDKt3PsGZBekwMwZcHnqAQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/tiled-thoughts/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/tiled-thoughts/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/tiled-thoughts/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/tiled-thoughts/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/tiled-thoughts/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="http://localhost:1313/tiled-thoughts/tags/numerical-stability/index.xml" title="rss">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/tiled-thoughts/tags/numerical-stability/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-mll67QQG7kL7A1sFL1s0IcbK9GOGvegj6grkQHIjwBQ05vjY9U9Wc6sxIHrN6iGk" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-vpJtNq88iNGEZ14B2xFQv+HzS4xUeXUaW8js8NJNCFyKfDkbK7ZSP3qA7O3t0r8y" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    integrity="sha384-9pNnCSpDapGwYb9ZGWw4jyG1sRJb8i7Y36ce3g8e9KqjVL0woG5dnU2A0n0F3V4O"
+    crossorigin="anonymous"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });">
+  </script>
+
+
+</head>
+<body class="list" id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/tiled-thoughts/" accesskey="h" title="Tiled Thoughts: A Verbose Debug Build (Alt + H)">Tiled Thoughts: A Verbose Debug Build</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://samarthnarang.com" title="Home">
+                    <span>Home</span>&nbsp;
+                    <svg fill="none" shape-rendering="geometricPrecision" stroke="currentColor" stroke-linecap="round"
+                        stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" height="12" width="12">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
+                        <path d="M15 3h6v6"></path>
+                        <path d="M10 14L21 3"></path>
+                    </svg>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header"><div class="breadcrumbs"><a href="http://localhost:1313/tiled-thoughts/">Home</a>&nbsp;»&nbsp;<a href="http://localhost:1313/tiled-thoughts/tags/">Tags</a></div>
+  <h1>
+    Numerical-Stability
+  </h1>
+</header>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Why Numerical Stability is a Compiler Concern
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>When people discuss numerical stability, the focus often falls on the algorithm itself:
+“Use the numerically stable softmax.”
+“This normalization is unstable in fp16.”
+But if you work on compilers or kernel code generation, you’ve likely encountered the other side of the coin:
+“It was stable in the Python reference… until we ‘optimized’ it.”s
+In this post, I want to highlight a crucial point:
+Numerical stability is not just a mathematical problem — it’s a compiler problem.
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-11-13 00:00:00 +0000 UTC'>November 13, 2025</span>&nbsp;·&nbsp;<span>1 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer>
+  <a class="entry-link" aria-label="post link to Why Numerical Stability is a Compiler Concern" href="http://localhost:1313/tiled-thoughts/posts/numerical-stability/"></a>
+</article>
+    </main>
+    <div class="subscribe-section">
+  <p>Want to get notified when new posts go live?</p>
+  <a
+    href="mailto:sntiledthoughts@gmail.com?subject=Subscribe%20to%20Tiled%20Thoughts&body=Hi%20Samarth,%0A%0AI'd%20like%20to%20subscribe%20to%20Tiled%20Thoughts.%0A%0AThanks!"
+    class="subscribe-button"
+  >
+    ✉️ Email me to subscribe
+  </a>
+</div>
+
+<style>
+.subscribe-section {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e5e5;
+}
+.subscribe-button {
+  display: inline-block;
+  background-color: #333;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.2s ease-in-out;
+}
+.subscribe-button:hover {
+  background-color: #555;
+}
+</style>
+</body>
+
+</html>
