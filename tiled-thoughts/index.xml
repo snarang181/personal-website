@@ -18,8 +18,7 @@
 &lt;!-- raw HTML omitted --&gt;
 &lt;h1 id=&#34;demystifying-gpu-terminology-a-compiler-engineers-field-guide&#34;&gt;Demystifying GPU Terminology: A Compiler Engineer&amp;rsquo;s Field Guide&lt;/h1&gt;
 &lt;!-- raw HTML omitted --&gt;
-&lt;p&gt;A vendor-neutral, performance-focused guide to GPU concepts— SIMT vs
-SIMD, warps, occupancy, coalescing, shared memory, spills, and matrix
+&lt;p&gt;SIMD, warps, occupancy, coalescing, shared memory, spills, and matrix
 units—mapped to real compiler decisions.&lt;/p&gt;
 &lt;!-- raw HTML omitted --&gt;
 &lt;!-- raw HTML omitted --&gt;
