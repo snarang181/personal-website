@@ -1,57 +1,764 @@
-<!doctype html><html lang=en dir=auto data-theme=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Quantization in MLIR: Types, Scales, and Where to Put the q | Tiled Thoughts: A Verbose Debug Build</title><meta name=keywords content="mlir,quantization,compilers,ml"><meta name=description content="Quantization is one of those things where everyone unanimously agrees &ldquo;it&rsquo;s important&rdquo;, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler&rsquo;s IR, right?
-In most stacks, quantization lives in an (awkward?) place:
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
 
-High-level frameworks (like PyTorch) expose &ldquo;quantized layers&rdquo; or post-training quantization APIs.
-Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts.
-The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions.
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Tiled Thoughts</title>
+<meta name="keywords" content="">
+<meta name="description" content="
 
-MLIR is actually a sweet spot to make quantization less cursed:"><meta name=author content="Samarth Narang"><link rel=canonical href=https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/><link crossorigin=anonymous href=/tiled-thoughts/assets/css/stylesheet.343cc480b9ffc8f04ccbe5e968ad674880cab773ec19905e93033065c1e7a804.css integrity="sha256-NDzEgLn/yPBMy+XpaK1nSIDKt3PsGZBekwMwZcHnqAQ=" rel="preload stylesheet" as=style><link rel=icon href=https://samarthnarang.com/tiled-thoughts/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://samarthnarang.com/tiled-thoughts/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://samarthnarang.com/tiled-thoughts/favicon-32x32.png><link rel=apple-touch-icon href=https://samarthnarang.com/tiled-thoughts/apple-touch-icon.png><link rel=mask-icon href=https://samarthnarang.com/tiled-thoughts/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51);color-scheme:dark}.list{background:var(--theme)}.toc{background:var(--entry)}}@media(prefers-color-scheme:light){.list::-webkit-scrollbar-thumb{border-color:var(--code-bg)}}</style></noscript><script>localStorage.getItem("pref-theme")==="dark"?document.querySelector("html").dataset.theme="dark":localStorage.getItem("pref-theme")==="light"?document.querySelector("html").dataset.theme="light":window.matchMedia("(prefers-color-scheme: dark)").matches?document.querySelector("html").dataset.theme="dark":document.querySelector("html").dataset.theme="light"</script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-mll67QQG7kL7A1sFL1s0IcbK9GOGvegj6grkQHIjwBQ05vjY9U9Wc6sxIHrN6iGk crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-vpJtNq88iNGEZ14B2xFQv+HzS4xUeXUaW8js8NJNCFyKfDkbK7ZSP3qA7O3t0r8y crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-9pNnCSpDapGwYb9ZGWw4jyG1sRJb8i7Y36ce3g8e9KqjVL0woG5dnU2A0n0F3V4O crossorigin=anonymous onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}]})'></script><meta property="og:url" content="https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/"><meta property="og:site_name" content="Tiled Thoughts: A Verbose Debug Build"><meta property="og:title" content="Quantization in MLIR: Types, Scales, and Where to Put the q"><meta property="og:description" content="Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?
-In most stacks, quantization lives in an (awkward?) place:
-High-level frameworks (like PyTorch) expose “quantized layers” or post-training quantization APIs. Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts. The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions. MLIR is actually a sweet spot to make quantization less cursed:"><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-11-18T00:00:00+00:00"><meta property="article:modified_time" content="2025-11-18T00:00:00+00:00"><meta property="article:tag" content="MLIR"><meta property="article:tag" content="Quantization"><meta property="article:tag" content="Compilers"><meta property="article:tag" content="Ml"><meta name=twitter:card content="summary"><meta name=twitter:title content="Quantization in MLIR: Types, Scales, and Where to Put the q"><meta name=twitter:description content="Quantization is one of those things where everyone unanimously agrees &ldquo;it&rsquo;s important&rdquo;, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler&rsquo;s IR, right?
-In most stacks, quantization lives in an (awkward?) place:
+Home » Posts
 
-High-level frameworks (like PyTorch) expose &ldquo;quantized layers&rdquo; or post-training quantization APIs.
-Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts.
-The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions.
+Quantization in MLIR: Types, Scales, and Where to Put the q
 
-MLIR is actually a sweet spot to make quantization less cursed:"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://samarthnarang.com/tiled-thoughts/posts/"},{"@type":"ListItem","position":2,"name":"Quantization in MLIR: Types, Scales, and Where to Put the q","item":"https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Quantization in MLIR: Types, Scales, and Where to Put the q","name":"Quantization in MLIR: Types, Scales, and Where to Put the q","description":"Quantization is one of those things where everyone unanimously agrees \u0026ldquo;it\u0026rsquo;s important\u0026rdquo;, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler\u0026rsquo;s IR, right?\nIn most stacks, quantization lives in an (awkward?) place:\nHigh-level frameworks (like PyTorch) expose \u0026ldquo;quantized layers\u0026rdquo; or post-training quantization APIs. Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts. The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions. MLIR is actually a sweet spot to make quantization less cursed:\n","keywords":["mlir","quantization","compilers","ml"],"articleBody":"Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?\nIn most stacks, quantization lives in an (awkward?) place:\nHigh-level frameworks (like PyTorch) expose “quantized layers” or post-training quantization APIs. Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts. The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions. MLIR is actually a sweet spot to make quantization less cursed:\nYou can make quantization a first-class citizen of your IR: visible in types, explicit in ops, and modular in passes.\nIn this post, I want to walk through:\nWhat “quantization” means in this context, How you can represent quantized tensors in MLIR types, Where to insert quantize and dequantize ops in your IR, How this plays with dialects like Linalg. Some design considerations worth arguing about. 1. Quick mental model: What are we even quantizing? Most ML inference quantization schemes boil down to this:\nStore values in low-precision integers (e.g., int8, int4) to save memory and bandwidth. Interpret them using a scale (and sometimes a zero point) to map back to real numbers. The classic affine mapping is:\nreal_value = scale * (quantized_value - zero_point) Here, quantized_value is the low-precision integer stored in memory. scale is a floating-point number that determines the “step size” between quantized levels. zero_point is an integer offset that allows representing zero exactly. So if you want this integrated in the IR, we need to answer:\nWhere do we store scale and zero_point? Are they attached to types, attributes, or explicit ops? Where in the IR do we cross between quantized and real-valued representations? 2. Quantized types: putting scale and zero point in the type system MLIR’s type system is rich enough that quantization metadata does not have to float around in comments or attributes. You can make it part of the type.\nA conceptual example:\n// An 8-bit signed quantized element type !qint = !quant.uniform\u003ci8:f32, scale=0.02, zero_point=-5\u003e // A quantized tensor type !qtensor = tensor\u003c128x128x64x!qint\u003e Here, !quant.uniform defines a quantized integer type with:\ni8 as the storage type (8-bit integer) in hardware, f32 as the real-valued type it maps to (logical real domain), scale and zero_point as parameters. And, we get some nice properties:\nPasses can easily query quantized vs real types. Implement patterns that operate on quantized data whose semantics are clear. For example, “Fuse two operations that both use the same quantization parameters.” Lowering to backend-specific Instruction Set Architectures (ISAs) can directly leverage this type information. We can also define different quantization schemes (e.g., symmetric, asymmetric, per-channel) by extending the type system further.\nE.g. for per-channel quantization\n// Per-channel quantization along the C dimension !qconv_weight = tensor\u003c64x3x3x3x!quant.uniform\u003ci8:f32, scales = [0.01, 0.02, ...], zero_points = [0, 0, ...], axis = 0\u003e\u003e Per-channel quantization allows each output channel to have its own scale and zero point, which is common in convolutional weights.\n3. quantize and dequantize ops: where do we switch domains? At some point, we need to convert between real-valued tensors and quantized tensors. This is where quantize and dequantize ops come in.\n%f = ... : tensor\u003c...xf32\u003e // Float to quantized %q = \"quant.quantize\" %f : tensor\u003c...xf32\u003e to tensor\u003c...x!qint\u003e // Quantized to float %f2 = \"quant.dequantize\" %q : tensor\u003c...x!qint\u003e to tensor\u003c...xf32\u003e The big question is: Where do we place these ops in the IR?\nTwo common patterns:\nEarly quantization, late dequantization: Insert quantize ops right after the model is loaded or after a preprocessing/calibration phase. Keep the rest of the model in quantized form as long as possible. Insert dequantize ops only at the very end, before outputting results, or when a non-quantized op is needed. Pros:\nMaximum performance gain from quantization. Lets you propagate quantized types through most of the graph. Cons:\nMore complex handling of quantized ops, i.e. IR transformations need to be quantization-aware. Some transformations need variant handling for quantized ops. Potentially more numerical error accumulation. Late quantization (backend-specific): Keep the model in floating-point form (f32/ f16) through most of the IR. Let the backend do a late “quantized lowering” where it introduces quantized types and quantize/dequantize ops as needed. Pros:\nSimpler IR transformations, as most ops remain in floating-point. Quantization logic can be centralized in backend lowering. Cons:\nHarder to do global optimizations that are quantization-aware. (e.g. fusing quantized ops, layout transformations driven by int8 kernels) We are effectively doing quantization “too late” to fully exploit its benefits. In practice, a hybrid approach could be used:\nA high-level quantization pass which decides which tensors/ops should be quantized and inserts quantize/dequantize ops accordingly. Later lowerings that replace generic quantized ops with backend-specific implementations. (e.g. linalg.matmul on quantized types lowering to int8 GEMM kernels) 4. Quantization and linalg: generic ops, concrete kernels MLIR’s linalg dialect is a great fit for quantization because it provides high-level, generic operations that can be specialized for quantized types.\nFor example,\n//linalg.matmul on quantized types linalg.matmul ins (%A_q, %B_q : tensor, tensor) outs (%C_q : tensor) But what does this mean semantically?\nAre we interpreting it as an integer matrix multiplication followed by scaling? Are we expecting hardware-specific instructions (e.g. INT8 GEMM)? Are scales/zero points baked into the type or explicitly passed as rescale ops before/after the matmul? A reasonable pattern is\nKeep linalg ops element-type-generic: they operate on whatever types are given (quantized or real). Add passes that: Lower quantized linalg ops into int kernels + explicit rescaling. // Pseudocode lowering %acc \"linalg.matmul\" ins(%A_int8, %B_int8) : tensor, tensor -\u003e tensor %out = \"quant.rescale\" (acc) {scale = ..., zero_point = ...} : tensor to tensor Or directly lower to backend-specific quantized kernels that understand the quantization parameters. Let backend-specific passes choose instructions based on the quantization parameters encoded in types. The key idea:\nlinalg gives you structured loops; quantization adds semantic constraints.\nThe compiler’s job is to bridge the two: ensuring that quantized semantics are respected while still leveraging the high-level structure of linalg ops.\n5. Quantization-friendly fusion and vectorization Quantization graphs are full of patterns like:\nquantize -\u003e conv -\u003e relu -\u003e dequantize quantize -\u003e matmul -\u003e add_bias -\u003e activation -\u003e dequantize To make these fast, you want to\nFuse quantized ops together while staying in the quantized domain. Avoid spurious dequantize/quantize hops when ops can be fused. Vectorize int8/uint8 arithmetic to leverage SIMD instructions. In MLIR terms, this means:\nRewrite patterns like %q = quant.quantize %f : tensor\u003c...xf32\u003e to tensor\u003c...x!qint\u003e %y = \"mydialect.conv\"(%q, %w) : tensor\u003c...x!qint\u003e, tensor\u003c...x!qint\u003e -\u003e tensor\u003c...x!qint\u003e %z = \"mydialect.relu\"(%y) : tensor\u003c...x!qint\u003e -\u003e tensor\u003c...x!qint\u003e %out = quant.dequantize %z : tensor\u003c...x!qint\u003e to tensor\u003c...xf32\u003e into a single fused op that stays in the quantized domain:\n%out = \"mydialect.fused_conv_relu\"(%f, %w) : tensor\u003c...xf32\u003e, tensor\u003c...x!qint\u003e -\u003e tensor\u003c...xf32\u003e Teach vector lowering and target-specific backends to handle quantized types efficiently. %vA = vector.transfer_read %A_q ... : tensor\u003c...x!qint\u003e to vector\u003c...xi8\u003e %vB = vector.transfer_read %B_q ... : tensor\u003c...x!qint\u003e to vector\u003c...xi8\u003e %VAcc = \"vector.dot_qi8\"(%vA, %vB) : vector\u003c...xi8\u003e, vector\u003c...xi8\u003e -\u003e vector\u003c...xi32\u003e Again, whether you use actual quant.* dialect types or domain-specific ones, the pattern is\nMake quantization explicit in types and ops. Enable fusion and vectorization passes to recognize and optimize quantized patterns. Only dequantize when absolutely necessary. 6. Where to put the “q”: design considerations Zooming out, a plausible high-level storyline for an MLIR-based quantization pipeline could be:\nModel Import: Load a floating-point model (e.g., from ONNX, TensorFlow). Quantization Pass: Analyze the model, decide which tensors/ops to quantize, attach parameters to types, insert quantize/dequantize ops. Quantized Optimization Passes: Fuse quantized ops, fold unnecessary conversions, vectorize quantized computations. Structured Lowering: Lower linalg and other high-level ops to quantized kernels, respecting quantization semantics. Backend Lowering:Final mapping to LLVM or target-specific codegen, leveraging quantized instructions. 7. Design questions to ponder None of this is set in stone, quantization is a moving target with many open questions:\nHow much should the type system know? Do you always carry scales and zero points in types, or if that is too heavyweight, can you use attributes or side tables? Static vs Dynamic Quantization Parameters Some schemes use fixed scales/zero points, others compute them on-the-fly (e.g., per-batch). How to represent this in types/ops? Interplay with mixed precision Where do fp16/bfloat16 mixed precision and quantization interact? Verification and correctness How to ensure that quantized computations respect numerical properties (e.g., range, overflow)? These are exciting questions for compiler and MLIR designers to explore.\n","wordCount":"1401","inLanguage":"en","datePublished":"2025-11-18T00:00:00Z","dateModified":"2025-11-18T00:00:00Z","author":{"@type":"Person","name":"Samarth Narang"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/"},"publisher":{"@type":"Organization","name":"Tiled Thoughts: A Verbose Debug Build","logo":{"@type":"ImageObject","url":"https://samarthnarang.com/tiled-thoughts/favicon.ico"}}}</script></head><body id=top><header class=header><nav class=nav><div class=logo><a href=https://samarthnarang.com/tiled-thoughts/ accesskey=h title="Tiled Thoughts: A Verbose Debug Build (Alt + H)">Tiled Thoughts: A Verbose Debug Build</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
-<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu><li><a href=https://samarthnarang.com title=Home><span>Home</span>&nbsp;
-<svg fill="none" shape-rendering="geometricPrecision" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" height="12" width="12"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a></li></ul></nav></header><main class=main><article class=post-single><header class=post-header><div class=breadcrumbs><a href=https://samarthnarang.com/tiled-thoughts/>Home</a>&nbsp;»&nbsp;<a href=https://samarthnarang.com/tiled-thoughts/posts/>Posts</a></div><h1 class="post-title entry-hint-parent">Quantization in MLIR: Types, Scales, and Where to Put the q</h1><div class=post-meta><span title='2025-11-18 00:00:00 +0000 UTC'>November 18, 2025</span>&nbsp;·&nbsp;<span>7 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></div></header><div class=post-content><p>Quantization is one of those things where everyone unanimously agrees &ldquo;it&rsquo;s important&rdquo;, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler&rsquo;s IR, right?</p><p>In most stacks, quantization lives in an (awkward?) place:</p><ul><li>High-level frameworks (like PyTorch) expose &ldquo;quantized layers&rdquo; or post-training quantization APIs.</li><li>Backends (like TensorRT, ONNX Runtime) and kernels <em>really</em> care about bit-widths, scales, zero points, and data layouts.</li><li>The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions.</li></ul><p>MLIR is actually a sweet spot to make quantization less cursed:</p><blockquote><p><strong>You can make quantization a first-class citizen of your IR: visible in types, explicit in ops, and modular in passes.</strong></p></blockquote><p>In this post, I want to walk through:</p><ol><li>What &ldquo;quantization&rdquo; means in this context,</li><li>How you can represent quantized tensors in MLIR types,</li><li>Where to insert <code>quantize</code> and <code>dequantize</code> ops in your IR,</li><li>How this plays with dialects like Linalg.</li><li>Some design considerations worth arguing about.</li></ol><hr><h2 id=1-quick-mental-model-what-are-we-even-quantizing>1. Quick mental model: What are we even quantizing?<a hidden class=anchor aria-hidden=true href=#1-quick-mental-model-what-are-we-even-quantizing>#</a></h2><p>Most ML inference quantization schemes boil down to this:</p><ul><li>Store values in <strong>low-precision integers</strong> (e.g., int8, int4) to save memory and bandwidth.</li><li>Interpret them using a <strong>scale</strong> (and sometimes a <strong>zero point</strong>) to map back to real numbers.</li></ul><p>The classic affine mapping is:</p><pre tabindex=0><code>real_value = scale * (quantized_value - zero_point)
-</code></pre><ul><li>Here, <code>quantized_value</code> is the low-precision integer stored in memory.</li><li><code>scale</code> is a floating-point number that determines the &ldquo;step size&rdquo; between quantized levels.</li><li><code>zero_point</code> is an integer offset that allows representing zero exactly.</li></ul><p>So if you want this integrated in the IR, we need to answer:</p><ul><li>Where do we store <code>scale</code> and <code>zero_point</code>?</li><li>Are they attached to types, attributes, or explicit ops?</li><li>Where in the IR do we cross between quantized and real-valued representations?</li></ul><hr><h2 id=2-quantized-types-putting-scale-and-zero-point-in-the-type-system>2. Quantized types: putting scale and zero point in the type system<a hidden class=anchor aria-hidden=true href=#2-quantized-types-putting-scale-and-zero-point-in-the-type-system>#</a></h2><p>MLIR&rsquo;s type system is rich enough that quantization metadata does not have to float around in comments or attributes. You can make it part of the <em>type</em>.</p><p>A conceptual example:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span><span style=color:#75715e>// An 8-bit signed quantized element type
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>!qint = !quant.uniform&lt;<span style=color:#66d9ef>i8</span>:<span style=color:#66d9ef>f32</span>, scale=<span style=color:#ae81ff>0.02</span>, zero_point=<span style=color:#ae81ff>-5</span>&gt;
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e>// A quantized tensor type
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>!qtensor = <span style=color:#66d9ef>tensor</span>&lt;<span style=color:#ae81ff>128x128x64x</span>!qint&gt;
-</span></span></code></pre></div><p>Here, <code>!quant.uniform&lt;i8:f32, scale=0.02, zero_point=-5></code> defines a quantized integer type with:</p><ul><li><code>i8</code> as the storage type (8-bit integer) in hardware,</li><li><code>f32</code> as the real-valued type it maps to (logical real domain),</li><li><code>scale</code> and <code>zero_point</code> as parameters.</li></ul><p>And, we get some nice properties:</p><ul><li>Passes can easily query quantized vs real types.</li><li>Implement patterns that operate on quantized data whose semantics are clear. For example, &ldquo;Fuse two operations that both use the same quantization parameters.&rdquo;</li><li>Lowering to backend-specific Instruction Set Architectures (ISAs) can directly leverage this type information.</li></ul><p>We can also define different quantization schemes (e.g., symmetric, asymmetric, per-channel) by extending the type system further.</p><p>E.g. for per-channel quantization</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span><span style=color:#75715e>// Per-channel quantization along the C dimension
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>!qconv_weight = <span style=color:#66d9ef>tensor</span>&lt;<span style=color:#ae81ff>64x3x3x3x</span>!quant.uniform&lt;<span style=color:#66d9ef>i8</span>:<span style=color:#66d9ef>f32</span>,
-</span></span><span style=display:flex><span>                                               scales = [<span style=color:#ae81ff>0.01</span>, <span style=color:#ae81ff>0.02</span>, ...],
-</span></span><span style=display:flex><span>                                               zero_points = [<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>0</span>, ...],
-</span></span><span style=display:flex><span>                                               axis = <span style=color:#ae81ff>0</span>&gt;&gt;
-</span></span></code></pre></div><blockquote><p>Per-channel quantization allows each output channel to have its own scale and zero point, which is common in convolutional weights.</p></blockquote><hr><h2 id=3-quantize-and-dequantize-ops-where-do-we-switch-domains>3. <code>quantize</code> and <code>dequantize</code> ops: where do we switch domains?<a hidden class=anchor aria-hidden=true href=#3-quantize-and-dequantize-ops-where-do-we-switch-domains>#</a></h2><p>At some point, we need to convert between real-valued tensors and quantized tensors. This is where <code>quantize</code> and <code>dequantize</code> ops come in.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span>%f = ... : <span style=color:#66d9ef>tensor</span>&lt;...xf32&gt;
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e>// Float to quantized
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>%q = <span style=color:#e6db74>&#34;quant.quantize&#34;</span> %f : <span style=color:#66d9ef>tensor</span>&lt;...xf32&gt; to <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt;
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#75715e>// Quantized to float
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>%f2 = <span style=color:#e6db74>&#34;quant.dequantize&#34;</span> %q : <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt; to <span style=color:#66d9ef>tensor</span>&lt;...xf32&gt;
-</span></span></code></pre></div><p>The big question is: <em>Where</em> do we place these ops in the IR?</p><p>Two common patterns:</p><ol><li><strong>Early quantization, late dequantization</strong>:</li></ol><ul><li>Insert <code>quantize</code> ops right after the model is loaded or after a preprocessing/calibration phase.</li><li>Keep the rest of the model in quantized form as long as possible.</li><li>Insert <code>dequantize</code> ops only at the very end, before outputting results, or when a non-quantized op is needed.</li></ul><p><em>Pros</em>:</p><ul><li>Maximum performance gain from quantization.</li><li>Lets you propagate quantized types through most of the graph.</li></ul><p><em>Cons</em>:</p><ul><li>More complex handling of quantized ops, i.e. IR transformations need to be quantization-aware.</li><li>Some transformations need variant handling for quantized ops.</li><li>Potentially more numerical error accumulation.</li></ul><ol start=2><li><strong>Late quantization (backend-specific)</strong>:</li></ol><ul><li>Keep the model in floating-point form (<code>f32</code>/ <code>f16</code>) through most of the IR.</li><li>Let the backend do a late &ldquo;quantized lowering&rdquo; where it introduces quantized types and <code>quantize</code>/<code>dequantize</code> ops as needed.</li></ul><p><em>Pros</em>:</p><ul><li>Simpler IR transformations, as most ops remain in floating-point.</li><li>Quantization logic can be centralized in backend lowering.</li></ul><p><em>Cons</em>:</p><ul><li>Harder to do global optimizations that are quantization-aware. (e.g. fusing quantized ops, layout transformations driven by int8 kernels)</li><li>We are effectively doing quantization &ldquo;too late&rdquo; to fully exploit its benefits.</li></ul><p>In practice, a hybrid approach could be used:</p><ul><li>A <strong>high-level quantization pass</strong> which decides which tensors/ops should be quantized and inserts <code>quantize</code>/<code>dequantize</code> ops accordingly.</li><li><strong>Later lowerings</strong> that replace generic quantized ops with backend-specific implementations. (e.g. <code>linalg.matmul</code> on quantized types lowering to int8 GEMM kernels)</li></ul><hr><h2 id=4-quantization-and-linalg-generic-ops-concrete-kernels>4. Quantization and <code>linalg</code>: generic ops, concrete kernels<a hidden class=anchor aria-hidden=true href=#4-quantization-and-linalg-generic-ops-concrete-kernels>#</a></h2><p>MLIR&rsquo;s <code>linalg</code> dialect is a great fit for quantization because it provides high-level, generic operations that can be specialized for quantized types.</p><p>For example,</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span><span style=color:#75715e>//linalg.matmul on quantized types
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>linalg.matmul ins (%A_q, %B_q : <span style=color:#66d9ef>tensor</span>&lt;MxKx!qint&gt;, <span style=color:#66d9ef>tensor</span>&lt;KxNx!qint&gt;) 
-</span></span><span style=display:flex><span>               outs (%C_q : <span style=color:#66d9ef>tensor</span>&lt;MxNx!qint&gt;)
-</span></span></code></pre></div><p>But what does this mean semantically?</p><ul><li>Are we interpreting it as an integer matrix multiplication followed by scaling?</li><li>Are we expecting hardware-specific instructions (e.g. INT8 GEMM)?</li><li>Are scales/zero points baked into the type or explicitly passed as rescale ops before/after the matmul?</li></ul><p>A reasonable pattern is</p><ol><li>Keep <code>linalg</code> ops <strong>element-type-generic</strong>: they operate on whatever types are given (quantized or real).</li><li>Add passes that:<ul><li>Lower quantized <code>linalg</code> ops into <strong>int kernels + explicit rescaling</strong>.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span><span style=color:#75715e>// Pseudocode lowering
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>%acc <span style=color:#e6db74>&#34;linalg.matmul&#34;</span> ins(%A_int8, %B_int8) : <span style=color:#66d9ef>tensor</span>&lt;MxKxi8&gt;, <span style=color:#66d9ef>tensor</span>&lt;KxNxi8&gt; -&gt; <span style=color:#66d9ef>tensor</span>&lt;MxNxi32&gt;
-</span></span><span style=display:flex><span>%out = <span style=color:#e6db74>&#34;quant.rescale&#34;</span> (acc) 
-</span></span><span style=display:flex><span>{scale = ..., zero_point = ...} : <span style=color:#66d9ef>tensor</span>&lt;MxNxi32&gt; to <span style=color:#66d9ef>tensor</span>&lt;MxNxi8&gt;
-</span></span></code></pre></div><ul><li>Or directly lower to <strong>backend-specific quantized kernels</strong> that understand the quantization parameters.</li></ul></li><li>Let backend-specific passes choose instructions based on the quantization parameters encoded in types.</li></ol><p>The key idea:</p><blockquote><p><code>linalg</code> gives you structured loops; quantization adds semantic constraints.</p></blockquote><p>The compiler&rsquo;s job is to bridge the two: ensuring that quantized semantics are respected while still leveraging the high-level structure of <code>linalg</code> ops.</p><hr><h2 id=5-quantization-friendly-fusion-and-vectorization>5. Quantization-friendly fusion and vectorization<a hidden class=anchor aria-hidden=true href=#5-quantization-friendly-fusion-and-vectorization>#</a></h2><p>Quantization graphs are full of patterns like:</p><ul><li><code>quantize -> conv -> relu -> dequantize</code></li><li><code>quantize -> matmul -> add_bias -> activation -> dequantize</code></li></ul><p>To make these fast, you want to</p><ul><li><strong>Fuse</strong> quantized ops together while staying in the quantized domain.</li><li>Avoid spurious <code>dequantize</code>/<code>quantize</code> hops when ops can be fused.</li><li><strong>Vectorize</strong> int8/uint8 arithmetic to leverage SIMD instructions.</li></ul><p>In MLIR terms, this means:</p><ul><li>Rewrite patterns like</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span>%q = quant.quantize %f : <span style=color:#66d9ef>tensor</span>&lt;...xf32&gt; to <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt;
-</span></span><span style=display:flex><span>%y = <span style=color:#e6db74>&#34;mydialect.conv&#34;</span>(%q, %w) : <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt;, <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt; -&gt; <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt;
-</span></span><span style=display:flex><span>%z = <span style=color:#e6db74>&#34;mydialect.relu&#34;</span>(%y) : <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt; -&gt; <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt;
-</span></span><span style=display:flex><span>%out = quant.dequantize %z : <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt; to <span style=color:#66d9ef>tensor</span>&lt;...xf32&gt;
-</span></span></code></pre></div><p>into a single fused op that stays in the quantized domain:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span>%out = <span style=color:#e6db74>&#34;mydialect.fused_conv_relu&#34;</span>(%f, %w) :
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>tensor</span>&lt;...xf32&gt;, <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt; -&gt; <span style=color:#66d9ef>tensor</span>&lt;...xf32&gt;
-</span></span></code></pre></div><ul><li>Teach <code>vector</code> lowering and target-specific backends to handle quantized types efficiently.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-mlir data-lang=mlir><span style=display:flex><span>%vA = <span style=color:#66d9ef>vector</span>.transfer_read %A_q ... : <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt; to <span style=color:#66d9ef>vector</span>&lt;...xi8&gt;
-</span></span><span style=display:flex><span>%vB = <span style=color:#66d9ef>vector</span>.transfer_read %B_q ... : <span style=color:#66d9ef>tensor</span>&lt;...x!qint&gt; to <span style=color:#66d9ef>vector</span>&lt;...xi8&gt;
-</span></span><span style=display:flex><span>%VAcc = <span style=color:#e6db74>&#34;vector.dot_qi8&#34;</span>(%vA, %vB) : <span style=color:#66d9ef>vector</span>&lt;...xi8&gt;, <span style=color:#66d9ef>vector</span>&lt;...xi8&gt; -&gt; <span style=color:#66d9ef>vector</span>&lt;...xi32&gt;
-</span></span></code></pre></div><p>Again, whether you use actual <code>quant.*</code> dialect types or domain-specific ones, the pattern is</p><ul><li>Make quantization explicit in types and ops.</li><li>Enable fusion and vectorization passes to recognize and optimize quantized patterns.</li><li>Only dequantize when absolutely necessary.</li></ul><hr><h2 id=6-where-to-put-the-q-design-considerations>6. Where to put the &ldquo;q&rdquo;: design considerations<a hidden class=anchor aria-hidden=true href=#6-where-to-put-the-q-design-considerations>#</a></h2><p>Zooming out, a plausible high-level storyline for an MLIR-based
-quantization pipeline could be:</p><ol><li><strong>Model Import</strong>: Load a floating-point model (e.g., from ONNX, TensorFlow).</li><li><strong>Quantization Pass</strong>: Analyze the model, decide which tensors/ops to quantize, attach parameters to types, insert <code>quantize</code>/<code>dequantize</code> ops.</li><li><strong>Quantized Optimization Passes</strong>: Fuse quantized ops, fold unnecessary conversions, vectorize quantized computations.</li><li><strong>Structured Lowering</strong>: Lower <code>linalg</code> and other high-level ops to quantized kernels, respecting quantization semantics.</li><li><strong>Backend Lowering</strong>:Final mapping to LLVM or target-specific codegen, leveraging quantized instructions.</li></ol><hr><h2 id=7-design-questions-to-ponder>7. Design questions to ponder<a hidden class=anchor aria-hidden=true href=#7-design-questions-to-ponder>#</a></h2><p>None of this is set in stone, quantization is a moving target with many open questions:</p><ul><li><strong>How much should the type system know?</strong></li></ul><ul><li>Do you always carry scales and zero points in types, or if that is too heavyweight, can you use attributes or side tables?</li></ul><ul><li><strong>Static vs Dynamic Quantization Parameters</strong></li></ul><ul><li>Some schemes use fixed scales/zero points, others compute them on-the-fly (e.g., per-batch). How to represent this in types/ops?</li></ul><ul><li><strong>Interplay with mixed precision</strong></li></ul><ul><li>Where do <code>fp16/bfloat16</code> mixed precision and quantization interact?</li></ul><ul><li><strong>Verification and correctness</strong>
-How to ensure that quantized computations respect numerical properties (e.g., range, overflow)?</li></ul><p>These are exciting questions for compiler and MLIR designers to explore.</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://samarthnarang.com/tiled-thoughts/tags/mlir/>MLIR</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/quantization/>Quantization</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/compilers/>Compilers</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/ml/>Ml</a></li></ul><nav class=paginav><a class=prev href=https://samarthnarang.com/tiled-thoughts/posts/vec-playground/><span class=title>« Prev</span><br><span>Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case Study</span>
-</a><a class=next href=https://samarthnarang.com/tiled-thoughts/posts/multi-gpu-comm/><span class=title>Next »</span><br><span>How GPUs Talk: A Practical Guide to Multi-GPU Training and Communication</span></a></nav></footer></article></main><div class=subscribe-section><p>Want to get notified when new posts go live?</p><a href="mailto:sntiledthoughts@gmail.com?subject=Subscribe%20to%20Tiled%20Thoughts&body=Hi%20Samarth,%0A%0AI'd%20like%20to%20subscribe%20to%20Tiled%20Thoughts.%0A%0AThanks!" class=subscribe-button>✉️ Email me to subscribe</a></div><style>.subscribe-section{text-align:center;margin-top:2rem;padding-top:1rem;border-top:1px solid #e5e5e5}.subscribe-button{display:inline-block;background-color:#333;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;transition:background .2s ease-in-out}.subscribe-button:hover{background-color:#555}</style></body></html>
+November 18, 2025 · 7
+min · Samarth Narang
+
+
+
+Quantization is one of those things where everyone unanimously agrees
+“it’s important”, but the details are often fuzzy; I mean, no one really
+wants to think about it in their compiler’s IR, right?">
+<meta name="author" content="">
+<link rel="canonical" href="https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/">
+<link crossorigin="anonymous" href="/tiled-thoughts/assets/css/stylesheet.343cc480b9ffc8f04ccbe5e968ad674880cab773ec19905e93033065c1e7a804.css" integrity="sha256-NDzEgLn/yPBMy&#43;XpaK1nSIDKt3PsGZBekwMwZcHnqAQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://samarthnarang.com/tiled-thoughts/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://samarthnarang.com/tiled-thoughts/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://samarthnarang.com/tiled-thoughts/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://samarthnarang.com/tiled-thoughts/apple-touch-icon.png">
+<link rel="mask-icon" href="https://samarthnarang.com/tiled-thoughts/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script><meta property="og:url" content="https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/">
+  <meta property="og:site_name" content="Tiled Thoughts">
+  <meta property="og:title" content="Tiled Thoughts">
+  <meta property="og:description" content=" Home » Posts
+Quantization in MLIR: Types, Scales, and Where to Put the q November 18, 2025 · 7 min · Samarth Narang
+Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="">
+<meta name="twitter:description" content="
+
+Home » Posts
+
+Quantization in MLIR: Types, Scales, and Where to Put the q
+
+November 18, 2025 · 7
+min · Samarth Narang
+
+
+
+Quantization is one of those things where everyone unanimously agrees
+“it’s important”, but the details are often fuzzy; I mean, no one really
+wants to think about it in their compiler’s IR, right?">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://samarthnarang.com/tiled-thoughts/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "",
+      "item": "https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "",
+  "name": "",
+  "description": " Home » Posts\nQuantization in MLIR: Types, Scales, and Where to Put the q November 18, 2025 · 7 min · Samarth Narang\nQuantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?\n",
+  "keywords": [
+    
+  ],
+  "articleBody": " Home » Posts\nQuantization in MLIR: Types, Scales, and Where to Put the q November 18, 2025 · 7 min · Samarth Narang\nQuantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?\nIn most stacks, quantization lives in an (awkward?) place:\nHigh-level frameworks (like PyTorch) expose “quantized layers” or post-training quantization APIs. Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts. The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions. MLIR is actually a sweet spot to make quantization less cursed:\nYou can make quantization a first-class citizen of your IR: visible in types, explicit in ops, and modular in passes.\nIn this post, I want to walk through:\nWhat “quantization” means in this context, How you can represent quantized tensors in MLIR types, Where to insert quantize and dequantize ops in your IR, How this plays with dialects like Linalg. Some design considerations worth arguing about. 1. Quick mental model: What are we even quantizing? Most ML inference quantization schemes boil down to this:\nStore values in low-precision integers (e.g., int8, int4) to save memory and bandwidth. Interpret them using a scale (and sometimes a zero point) to map back to real numbers. The classic affine mapping is:\nreal_value = scale * (quantized_value - zero_point) Here, quantized_value is the low-precision integer stored in memory. scale is a floating-point number that determines the “step size” between quantized levels. zero_point is an integer offset that allows representing zero exactly. So if you want this integrated in the IR, we need to answer:\nWhere do we store scale and zero_point? Are they attached to types, attributes, or explicit ops? Where in the IR do we cross between quantized and real-valued representations? 2. Quantized types: putting scale and zero point in the type system MLIR’s type system is rich enough that quantization metadata does not have to float around in comments or attributes. You can make it part of the type.\nA conceptual example:\n// An 8-bit signed quantized element type !qint = !quant.uniform // A quantized tensor type !qtensor = tensor\u003c128x128x64x!qint\u003e Here, !quant.uniform defines a quantized integer type with:\ni8 as the storage type (8-bit integer) in hardware, f32 as the real-valued type it maps to (logical real domain), scale and zero_point as parameters. And, we get some nice properties:\nPasses can easily query quantized vs real types. Implement patterns that operate on quantized data whose semantics are clear. For example, “Fuse two operations that both use the same quantization parameters.” Lowering to backend-specific Instruction Set Architectures (ISAs) can directly leverage this type information. We can also define different quantization schemes (e.g., symmetric, asymmetric, per-channel) by extending the type system further.\nE.g. for per-channel quantization\n// Per-channel quantization along the C dimension !qconv_weight = tensor\u003c64x3x3x3x!quant.uniform\u003e Per-channel quantization allows each output channel to have its own scale and zero point, which is common in convolutional weights.\n3. quantize and dequantize ops: where do we switch domains? At some point, we need to convert between real-valued tensors and quantized tensors. This is where quantize and dequantize ops come in.\n%f = ... : tensor\u003c...xf32\u003e // Float to quantized %q = \"quant.quantize\" %f : tensor\u003c...xf32\u003e to tensor\u003c...x!qint\u003e // Quantized to float %f2 = \"quant.dequantize\" %q : tensor\u003c...x!qint\u003e to tensor\u003c...xf32\u003e The big question is: Where do we place these ops in the IR?\nTwo common patterns:\nEarly quantization, late dequantization: Insert quantize ops right after the model is loaded or after a preprocessing/calibration phase. Keep the rest of the model in quantized form as long as possible. Insert dequantize ops only at the very end, before outputting results, or when a non-quantized op is needed. Pros:\nMaximum performance gain from quantization. Lets you propagate quantized types through most of the graph. Cons:\nMore complex handling of quantized ops, i.e. IR transformations need to be quantization-aware. Some transformations need variant handling for quantized ops. Potentially more numerical error accumulation. Late quantization (backend-specific): Keep the model in floating-point form (f32/ f16) through most of the IR. Let the backend do a late “quantized lowering” where it introduces quantized types and quantize/dequantize ops as needed. Pros:\nSimpler IR transformations, as most ops remain in floating-point. Quantization logic can be centralized in backend lowering. Cons:\nHarder to do global optimizations that are quantization-aware. (e.g. fusing quantized ops, layout transformations driven by int8 kernels) We are effectively doing quantization “too late” to fully exploit its benefits. In practice, a hybrid approach could be used:\nA high-level quantization pass which decides which tensors/ops should be quantized and inserts quantize/dequantize ops accordingly. Later lowerings that replace generic quantized ops with backend-specific implementations. (e.g. linalg.matmul on quantized types lowering to int8 GEMM kernels) 4. Quantization and linalg: generic ops, concrete kernels MLIR’s linalg dialect is a great fit for quantization because it provides high-level, generic operations that can be specialized for quantized types.\nFor example,\n//linalg.matmul on quantized types linalg.matmul ins (%A_q, %B_q : tensor, tensor) outs (%C_q : tensor) But what does this mean semantically?\nAre we interpreting it as an integer matrix multiplication followed by scaling? Are we expecting hardware-specific instructions (e.g. INT8 GEMM)? Are scales/zero points baked into the type or explicitly passed as rescale ops before/after the matmul? A reasonable pattern is\nKeep linalg ops element-type-generic: they operate on whatever types are given (quantized or real).\nAdd passes that:\nLower quantized linalg ops into int kernels + explicit rescaling. // Pseudocode lowering %acc \"linalg.matmul\" ins(%A_int8, %B_int8) : tensor, tensor -\u003e tensor %out = \"quant.rescale\" (acc) {scale = ..., zero_point = ...} : tensor to tensor Or directly lower to backend-specific quantized kernels that understand the quantization parameters. Let backend-specific passes choose instructions based on the quantization parameters encoded in types.\nThe key idea:\nlinalg gives you structured loops; quantization adds semantic constraints.\nThe compiler’s job is to bridge the two: ensuring that quantized semantics are respected while still leveraging the high-level structure of linalg ops.\n5. Quantization-friendly fusion and vectorization Quantization graphs are full of patterns like:\nquantize -\u003e conv -\u003e relu -\u003e dequantize quantize -\u003e matmul -\u003e add_bias -\u003e activation -\u003e dequantize To make these fast, you want to\nFuse quantized ops together while staying in the quantized domain. Avoid spurious dequantize/quantize hops when ops can be fused. Vectorize int8/uint8 arithmetic to leverage SIMD instructions. In MLIR terms, this means:\nRewrite patterns like %q = quant.quantize %f : tensor\u003c...xf32\u003e to tensor\u003c...x!qint\u003e %y = \"mydialect.conv\"(%q, %w) : tensor\u003c...x!qint\u003e, tensor\u003c...x!qint\u003e -\u003e tensor\u003c...x!qint\u003e %z = \"mydialect.relu\"(%y) : tensor\u003c...x!qint\u003e -\u003e tensor\u003c...x!qint\u003e %out = quant.dequantize %z : tensor\u003c...x!qint\u003e to tensor\u003c...xf32\u003e into a single fused op that stays in the quantized domain:\n%out = \"mydialect.fused_conv_relu\"(%f, %w) : tensor\u003c...xf32\u003e, tensor\u003c...x!qint\u003e -\u003e tensor\u003c...xf32\u003e Teach vector lowering and target-specific backends to handle quantized types efficiently. %vA = vector.transfer_read %A_q ... : tensor\u003c...x!qint\u003e to vector\u003c...xi8\u003e %vB = vector.transfer_read %B_q ... : tensor\u003c...x!qint\u003e to vector\u003c...xi8\u003e %VAcc = \"vector.dot_qi8\"(%vA, %vB) : vector\u003c...xi8\u003e, vector\u003c...xi8\u003e -\u003e vector\u003c...xi32\u003e Again, whether you use actual quant.* dialect types or domain-specific ones, the pattern is\nMake quantization explicit in types and ops. Enable fusion and vectorization passes to recognize and optimize quantized patterns. Only dequantize when absolutely necessary. 6. Where to put the “q”: design considerations Zooming out, a plausible high-level storyline for an MLIR-based quantization pipeline could be:\nModel Import: Load a floating-point model (e.g., from ONNX, TensorFlow). Quantization Pass: Analyze the model, decide which tensors/ops to quantize, attach parameters to types, insert quantize/dequantize ops. Quantized Optimization Passes: Fuse quantized ops, fold unnecessary conversions, vectorize quantized computations. Structured Lowering: Lower linalg and other high-level ops to quantized kernels, respecting quantization semantics. Backend Lowering:Final mapping to LLVM or target-specific codegen, leveraging quantized instructions. 7. Design questions to ponder None of this is set in stone, quantization is a moving target with many open questions:\nHow much should the type system know? Do you always carry scales and zero points in types, or if that is too heavyweight, can you use attributes or side tables? Static vs Dynamic Quantization Parameters Some schemes use fixed scales/zero points, others compute them on-the-fly (e.g., per-batch). How to represent this in types/ops? Interplay with mixed precision Where do fp16/bfloat16 mixed precision and quantization interact? Verification and correctness How to ensure that quantized computations respect numerical properties (e.g., range, overflow)? These are exciting questions for compiler and MLIR designers to explore.\nMLIR Quantization Compilers Ml « Prev Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case Study Next » How GPUs Talk: A Practical Guide to Multi-GPU Training and Communication\n",
+  "wordCount" : "1455",
+  "inLanguage": "en",
+  "datePublished": "0001-01-01T00:00:00Z",
+  "dateModified": "0001-01-01T00:00:00Z",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Tiled Thoughts",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://samarthnarang.com/tiled-thoughts/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://samarthnarang.com/tiled-thoughts/" accesskey="h" title="Tiled Thoughts (Alt + H)">Tiled Thoughts</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://samarthnarang.com/tiled-thoughts/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://samarthnarang.com/tiled-thoughts/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      
+    </h1>
+    <div class="post-meta"><span>7 min</span>
+
+</div>
+  </header> 
+  <div class="post-content"><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<p><a href="https://samarthnarang.com/tiled-thoughts/">Home</a> » <a href="https://samarthnarang.com/tiled-thoughts/posts/">Posts</a></p>
+<!-- raw HTML omitted -->
+<h1 id="quantization-in-mlir-types-scales-and-where-to-put-the-q">Quantization in MLIR: Types, Scales, and Where to Put the q<a hidden class="anchor" aria-hidden="true" href="#quantization-in-mlir-types-scales-and-where-to-put-the-q">#</a></h1>
+<!-- raw HTML omitted -->
+<p><!-- raw HTML omitted -->November 18, 2025<!-- raw HTML omitted --> · 7
+min · Samarth Narang</p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<p>Quantization is one of those things where everyone unanimously agrees
+“it’s important”, but the details are often fuzzy; I mean, no one really
+wants to think about it in their compiler’s IR, right?</p>
+<p>In most stacks, quantization lives in an (awkward?) place:</p>
+<ul>
+<li>High-level frameworks (like PyTorch) expose “quantized layers” or
+post-training quantization APIs.</li>
+<li>Backends (like TensorRT, ONNX Runtime) and kernels <em>really</em> care about
+bit-widths, scales, zero points, and data layouts.</li>
+<li>The glue in between is often a mishmash of ad-hoc passes, custom
+operators, and brittle assumptions.</li>
+</ul>
+<p>MLIR is actually a sweet spot to make quantization less cursed:</p>
+<blockquote>
+<p><strong>You can make quantization a first-class citizen of your IR: visible
+in types, explicit in ops, and modular in passes.</strong></p>
+</blockquote>
+<p>In this post, I want to walk through:</p>
+<ol>
+<li>What “quantization” means in this context,</li>
+<li>How you can represent quantized tensors in MLIR types,</li>
+<li>Where to insert <code>quantize</code> and <code>dequantize</code> ops in your IR,</li>
+<li>How this plays with dialects like Linalg.</li>
+<li>Some design considerations worth arguing about.</li>
+</ol>
+<hr>
+<h2 id="1-quick-mental-model-what-are-we-even-quantizing">1. Quick mental model: What are we even quantizing?<a hidden class="anchor" aria-hidden="true" href="#1-quick-mental-model-what-are-we-even-quantizing">#</a></h2>
+<p>Most ML inference quantization schemes boil down to this:</p>
+<ul>
+<li>Store values in <strong>low-precision integers</strong> (e.g., int8, int4) to save
+memory and bandwidth.</li>
+<li>Interpret them using a <strong>scale</strong> (and sometimes a <strong>zero point</strong>) to
+map back to real numbers.</li>
+</ul>
+<p>The classic affine mapping is:</p>
+<pre tabindex="0"><code>real_value = scale * (quantized_value - zero_point)
+</code></pre><ul>
+<li>Here, <code>quantized_value</code> is the low-precision integer stored in memory.</li>
+<li><code>scale</code> is a floating-point number that determines the “step size”
+between quantized levels.</li>
+<li><code>zero_point</code> is an integer offset that allows representing zero
+exactly.</li>
+</ul>
+<p>So if you want this integrated in the IR, we need to answer:</p>
+<ul>
+<li>Where do we store <code>scale</code> and <code>zero_point</code>?</li>
+<li>Are they attached to types, attributes, or explicit ops?</li>
+<li>Where in the IR do we cross between quantized and real-valued
+representations?</li>
+</ul>
+<hr>
+<h2 id="2-quantized-types-putting-scale-and-zero-point-in-the-type-system">2. Quantized types: putting scale and zero point in the type system<a hidden class="anchor" aria-hidden="true" href="#2-quantized-types-putting-scale-and-zero-point-in-the-type-system">#</a></h2>
+<p>MLIR’s type system is rich enough that quantization metadata does not
+have to float around in comments or attributes. You can make it part of
+the <em>type</em>.</p>
+<p>A conceptual example:</p>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>// An 8-bit signed quantized element type
+!qint = !quant.uniform&lt;i8:f32, scale=0.02, zero_point=-5&gt;
+
+// A quantized tensor type
+!qtensor = tensor&lt;128x128x64x!qint&gt;
+</code></pre><!-- raw HTML omitted -->
+<p>Here, <code>!quant.uniform&lt;i8:f32, scale=0.02, zero_point=-5&gt;</code> defines a
+quantized integer type with:</p>
+<ul>
+<li><code>i8</code> as the storage type (8-bit integer) in hardware,</li>
+<li><code>f32</code> as the real-valued type it maps to (logical real domain),</li>
+<li><code>scale</code> and <code>zero_point</code> as parameters.</li>
+</ul>
+<p>And, we get some nice properties:</p>
+<ul>
+<li>Passes can easily query quantized vs real types.</li>
+<li>Implement patterns that operate on quantized data whose semantics are
+clear. For example, “Fuse two operations that both use the same
+quantization parameters.”</li>
+<li>Lowering to backend-specific Instruction Set Architectures (ISAs) can
+directly leverage this type information.</li>
+</ul>
+<p>We can also define different quantization schemes (e.g., symmetric,
+asymmetric, per-channel) by extending the type system further.</p>
+<p>E.g. for per-channel quantization</p>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>// Per-channel quantization along the C dimension
+!qconv_weight = tensor&lt;64x3x3x3x!quant.uniform&lt;i8:f32,
+                                               scales = [0.01, 0.02, ...],
+                                               zero_points = [0, 0, ...],
+                                               axis = 0&gt;&gt;
+</code></pre><!-- raw HTML omitted -->
+<blockquote>
+<p>Per-channel quantization allows each output channel to have its own
+scale and zero point, which is common in convolutional weights.</p>
+</blockquote>
+<hr>
+<h2 id="3-quantize-and-dequantize-ops-where-do-we-switch-domains">3. <code>quantize</code> and <code>dequantize</code> ops: where do we switch domains?<a hidden class="anchor" aria-hidden="true" href="#3-quantize-and-dequantize-ops-where-do-we-switch-domains">#</a></h2>
+<p>At some point, we need to convert between real-valued tensors and
+quantized tensors. This is where <code>quantize</code> and <code>dequantize</code> ops come
+in.</p>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>%f = ... : tensor&lt;...xf32&gt;
+
+// Float to quantized
+%q = &#34;quant.quantize&#34; %f : tensor&lt;...xf32&gt; to tensor&lt;...x!qint&gt;
+
+// Quantized to float
+%f2 = &#34;quant.dequantize&#34; %q : tensor&lt;...x!qint&gt; to tensor&lt;...xf32&gt;
+</code></pre><!-- raw HTML omitted -->
+<p>The big question is: <em>Where</em> do we place these ops in the IR?</p>
+<p>Two common patterns:</p>
+<ol>
+<li><strong>Early quantization, late dequantization</strong>:</li>
+</ol>
+<ul>
+<li>Insert <code>quantize</code> ops right after the model is loaded or after a
+preprocessing/calibration phase.</li>
+<li>Keep the rest of the model in quantized form as long as possible.</li>
+<li>Insert <code>dequantize</code> ops only at the very end, before outputting
+results, or when a non-quantized op is needed.</li>
+</ul>
+<p><em>Pros</em>:</p>
+<ul>
+<li>Maximum performance gain from quantization.</li>
+<li>Lets you propagate quantized types through most of the graph.</li>
+</ul>
+<p><em>Cons</em>:</p>
+<ul>
+<li>More complex handling of quantized ops, i.e. IR transformations need
+to be quantization-aware.</li>
+<li>Some transformations need variant handling for quantized ops.</li>
+<li>Potentially more numerical error accumulation.</li>
+</ul>
+<ol start="2">
+<li><strong>Late quantization (backend-specific)</strong>:</li>
+</ol>
+<ul>
+<li>Keep the model in floating-point form (<code>f32</code>/ <code>f16</code>) through most of
+the IR.</li>
+<li>Let the backend do a late “quantized lowering” where it introduces
+quantized types and <code>quantize</code>/<code>dequantize</code> ops as needed.</li>
+</ul>
+<p><em>Pros</em>:</p>
+<ul>
+<li>Simpler IR transformations, as most ops remain in floating-point.</li>
+<li>Quantization logic can be centralized in backend lowering.</li>
+</ul>
+<p><em>Cons</em>:</p>
+<ul>
+<li>Harder to do global optimizations that are quantization-aware. (e.g.
+fusing quantized ops, layout transformations driven by int8 kernels)</li>
+<li>We are effectively doing quantization “too late” to fully exploit its
+benefits.</li>
+</ul>
+<p>In practice, a hybrid approach could be used:</p>
+<ul>
+<li>A <strong>high-level quantization pass</strong> which decides which tensors/ops
+should be quantized and inserts <code>quantize</code>/<code>dequantize</code> ops
+accordingly.</li>
+<li><strong>Later lowerings</strong> that replace generic quantized ops with
+backend-specific implementations. (e.g. <code>linalg.matmul</code> on quantized
+types lowering to int8 GEMM kernels)</li>
+</ul>
+<hr>
+<h2 id="4-quantization-and-linalg-generic-ops-concrete-kernels">4. Quantization and <code>linalg</code>: generic ops, concrete kernels<a hidden class="anchor" aria-hidden="true" href="#4-quantization-and-linalg-generic-ops-concrete-kernels">#</a></h2>
+<p>MLIR’s <code>linalg</code> dialect is a great fit for quantization because it
+provides high-level, generic operations that can be specialized for
+quantized types.</p>
+<p>For example,</p>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>//linalg.matmul on quantized types
+linalg.matmul ins (%A_q, %B_q : tensor&lt;MxKx!qint&gt;, tensor&lt;KxNx!qint&gt;) 
+               outs (%C_q : tensor&lt;MxNx!qint&gt;)
+</code></pre><!-- raw HTML omitted -->
+<p>But what does this mean semantically?</p>
+<ul>
+<li>Are we interpreting it as an integer matrix multiplication followed by
+scaling?</li>
+<li>Are we expecting hardware-specific instructions (e.g. INT8 GEMM)?</li>
+<li>Are scales/zero points baked into the type or explicitly passed as
+rescale ops before/after the matmul?</li>
+</ul>
+<p>A reasonable pattern is</p>
+<ol>
+<li>
+<p>Keep <code>linalg</code> ops <strong>element-type-generic</strong>: they operate on whatever
+types are given (quantized or real).</p>
+</li>
+<li>
+<p>Add passes that:</p>
+<ul>
+<li>Lower quantized <code>linalg</code> ops into <strong>int kernels + explicit
+rescaling</strong>.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>// Pseudocode lowering
+%acc &#34;linalg.matmul&#34; ins(%A_int8, %B_int8) : tensor&lt;MxKxi8&gt;, tensor&lt;KxNxi8&gt; -&gt; tensor&lt;MxNxi32&gt;
+%out = &#34;quant.rescale&#34; (acc) 
+{scale = ..., zero_point = ...} : tensor&lt;MxNxi32&gt; to tensor&lt;MxNxi8&gt;
+</code></pre><!-- raw HTML omitted -->
+<ul>
+<li>Or directly lower to <strong>backend-specific quantized kernels</strong> that
+understand the quantization parameters.</li>
+</ul>
+</li>
+<li>
+<p>Let backend-specific passes choose instructions based on the
+quantization parameters encoded in types.</p>
+</li>
+</ol>
+<p>The key idea:</p>
+<blockquote>
+<p><code>linalg</code> gives you structured loops; quantization adds semantic
+constraints.</p>
+</blockquote>
+<p>The compiler’s job is to bridge the two: ensuring that quantized
+semantics are respected while still leveraging the high-level structure
+of <code>linalg</code> ops.</p>
+<hr>
+<h2 id="5-quantization-friendly-fusion-and-vectorization">5. Quantization-friendly fusion and vectorization<a hidden class="anchor" aria-hidden="true" href="#5-quantization-friendly-fusion-and-vectorization">#</a></h2>
+<p>Quantization graphs are full of patterns like:</p>
+<ul>
+<li><code>quantize -&gt; conv -&gt; relu -&gt; dequantize</code></li>
+<li><code>quantize -&gt; matmul -&gt; add_bias -&gt; activation -&gt; dequantize</code></li>
+</ul>
+<p>To make these fast, you want to</p>
+<ul>
+<li><strong>Fuse</strong> quantized ops together while staying in the quantized domain.</li>
+<li>Avoid spurious <code>dequantize</code>/<code>quantize</code> hops when ops can be fused.</li>
+<li><strong>Vectorize</strong> int8/uint8 arithmetic to leverage SIMD instructions.</li>
+</ul>
+<p>In MLIR terms, this means:</p>
+<ul>
+<li>Rewrite patterns like</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>%q = quant.quantize %f : tensor&lt;...xf32&gt; to tensor&lt;...x!qint&gt;
+%y = &#34;mydialect.conv&#34;(%q, %w) : tensor&lt;...x!qint&gt;, tensor&lt;...x!qint&gt; -&gt; tensor&lt;...x!qint&gt;
+%z = &#34;mydialect.relu&#34;(%y) : tensor&lt;...x!qint&gt; -&gt; tensor&lt;...x!qint&gt;
+%out = quant.dequantize %z : tensor&lt;...x!qint&gt; to tensor&lt;...xf32&gt;
+</code></pre><!-- raw HTML omitted -->
+<p>into a single fused op that stays in the quantized domain:</p>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>%out = &#34;mydialect.fused_conv_relu&#34;(%f, %w) :
+    tensor&lt;...xf32&gt;, tensor&lt;...x!qint&gt; -&gt; tensor&lt;...xf32&gt;
+</code></pre><!-- raw HTML omitted -->
+<ul>
+<li>Teach <code>vector</code> lowering and target-specific backends to handle
+quantized types efficiently.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>%vA = vector.transfer_read %A_q ... : tensor&lt;...x!qint&gt; to vector&lt;...xi8&gt;
+%vB = vector.transfer_read %B_q ... : tensor&lt;...x!qint&gt; to vector&lt;...xi8&gt;
+%VAcc = &#34;vector.dot_qi8&#34;(%vA, %vB) : vector&lt;...xi8&gt;, vector&lt;...xi8&gt; -&gt; vector&lt;...xi32&gt;
+</code></pre><!-- raw HTML omitted -->
+<p>Again, whether you use actual <code>quant.*</code> dialect types or domain-specific
+ones, the pattern is</p>
+<ul>
+<li>Make quantization explicit in types and ops.</li>
+<li>Enable fusion and vectorization passes to recognize and optimize
+quantized patterns.</li>
+<li>Only dequantize when absolutely necessary.</li>
+</ul>
+<hr>
+<h2 id="6-where-to-put-the-q-design-considerations">6. Where to put the “q”: design considerations<a hidden class="anchor" aria-hidden="true" href="#6-where-to-put-the-q-design-considerations">#</a></h2>
+<p>Zooming out, a plausible high-level storyline for an MLIR-based
+quantization pipeline could be:</p>
+<ol>
+<li><strong>Model Import</strong>: Load a floating-point model (e.g., from ONNX,
+TensorFlow).</li>
+<li><strong>Quantization Pass</strong>: Analyze the model, decide which tensors/ops
+to quantize, attach parameters to types, insert
+<code>quantize</code>/<code>dequantize</code> ops.</li>
+<li><strong>Quantized Optimization Passes</strong>: Fuse quantized ops, fold
+unnecessary conversions, vectorize quantized computations.</li>
+<li><strong>Structured Lowering</strong>: Lower <code>linalg</code> and other high-level ops to
+quantized kernels, respecting quantization semantics.</li>
+<li><strong>Backend Lowering</strong>:Final mapping to LLVM or target-specific
+codegen, leveraging quantized instructions.</li>
+</ol>
+<hr>
+<h2 id="7-design-questions-to-ponder">7. Design questions to ponder<a hidden class="anchor" aria-hidden="true" href="#7-design-questions-to-ponder">#</a></h2>
+<p>None of this is set in stone, quantization is a moving target with many
+open questions:</p>
+<ul>
+<li><strong>How much should the type system know?</strong></li>
+</ul>
+<ul>
+<li>Do you always carry scales and zero points in types, or if that is too
+heavyweight, can you use attributes or side tables?</li>
+</ul>
+<ul>
+<li><strong>Static vs Dynamic Quantization Parameters</strong></li>
+</ul>
+<ul>
+<li>Some schemes use fixed scales/zero points, others compute them
+on-the-fly (e.g., per-batch). How to represent this in types/ops?</li>
+</ul>
+<ul>
+<li><strong>Interplay with mixed precision</strong></li>
+</ul>
+<ul>
+<li>Where do <code>fp16/bfloat16</code> mixed precision and quantization interact?</li>
+</ul>
+<ul>
+<li><strong>Verification and correctness</strong> How to ensure that quantized
+computations respect numerical properties (e.g., range, overflow)?</li>
+</ul>
+<p>These are exciting questions for compiler and MLIR designers to explore.</p>
+<!-- raw HTML omitted -->
+<ul>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/mlir/">MLIR</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/quantization/">Quantization</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/compilers/">Compilers</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/ml/">Ml</a></li>
+</ul>
+<p><!-- raw HTML omitted --><!-- raw HTML omitted -->« Prev<!-- raw HTML omitted --><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case
+Study<!-- raw HTML omitted --><!-- raw HTML omitted -->
+<!-- raw HTML omitted --><!-- raw HTML omitted -->Next »<!-- raw HTML omitted --><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->How GPUs Talk: A Practical Guide to Multi-GPU Training and
+Communication<!-- raw HTML omitted --><!-- raw HTML omitted --></p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://samarthnarang.com/tiled-thoughts/posts/numerical-stability/">
+    <span class="title">« Prev</span>
+    <br>
+    <span></span>
+  </a>
+  <a class="next" href="https://samarthnarang.com/tiled-thoughts/posts/rewriting-mlir/">
+    <span class="title">Next »</span>
+    <br>
+    <span></span>
+  </a>
+</nav>
+
+
+<ul class="share-buttons">
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on x"
+            href="https://x.com/intent/tweet/?text=&amp;url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f&amp;hashtags=">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M512 62.554 L 512 449.446 C 512 483.97 483.97 512 449.446 512 L 62.554 512 C 28.03 512 0 483.97 0 449.446 L 0 62.554 C 0 28.03 28.029 0 62.554 0 L 449.446 0 C 483.971 0 512 28.03 512 62.554 Z M 269.951 190.75 L 182.567 75.216 L 56 75.216 L 207.216 272.95 L 63.9 436.783 L 125.266 436.783 L 235.9 310.383 L 332.567 436.783 L 456 436.783 L 298.367 228.367 L 432.367 75.216 L 371.033 75.216 Z M 127.633 110 L 164.101 110 L 383.481 400.065 L 349.5 400.065 Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on linkedin"
+            href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f&amp;title=&amp;summary=&amp;source=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on reddit"
+            href="https://reddit.com/submit?url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f&title=">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on facebook"
+            href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on whatsapp"
+            href="https://api.whatsapp.com/send?text=%20-%20https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on telegram"
+            href="https://telegram.me/share/url?text=&amp;url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f">
+            <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on ycombinator"
+            href="https://news.ycombinator.com/submitlink?t=&u=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fquantization-in-mlir%2f">
+            <svg version="1.1" xml:space="preserve" width="30px" height="30px" viewBox="0 0 512 512" fill="currentColor"
+                xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">
+                <path
+                    d="M449.446 0C483.971 0 512 28.03 512 62.554L512 449.446C512 483.97 483.97 512 449.446 512L62.554 512C28.03 512 0 483.97 0 449.446L0 62.554C0 28.03 28.029 0 62.554 0L449.446 0ZM183.8767 87.9921H121.8427L230.6673 292.4508V424.0079H281.3328V292.4508L390.1575 87.9921H328.1233L256 238.2489z" />
+            </svg>
+        </a>
+    </li>
+</ul>
+
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="https://samarthnarang.com/tiled-thoughts/">Tiled Thoughts</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

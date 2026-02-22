@@ -1,129 +1,940 @@
-<!doctype html><html lang=en dir=auto data-theme=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Data Structure and Iterator Kung Fu in LLVM | Tiled Thoughts: A Verbose Debug Build</title><meta name=keywords content="LLVM,Data Structures,Iterators,Compilers,Performance,C++"><meta name=description content="Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes."><meta name=author content="Samarth Narang"><link rel=canonical href=https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/><link crossorigin=anonymous href=/tiled-thoughts/assets/css/stylesheet.343cc480b9ffc8f04ccbe5e968ad674880cab773ec19905e93033065c1e7a804.css integrity="sha256-NDzEgLn/yPBMy+XpaK1nSIDKt3PsGZBekwMwZcHnqAQ=" rel="preload stylesheet" as=style><link rel=icon href=https://samarthnarang.com/tiled-thoughts/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://samarthnarang.com/tiled-thoughts/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://samarthnarang.com/tiled-thoughts/favicon-32x32.png><link rel=apple-touch-icon href=https://samarthnarang.com/tiled-thoughts/apple-touch-icon.png><link rel=mask-icon href=https://samarthnarang.com/tiled-thoughts/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51);color-scheme:dark}.list{background:var(--theme)}.toc{background:var(--entry)}}@media(prefers-color-scheme:light){.list::-webkit-scrollbar-thumb{border-color:var(--code-bg)}}</style></noscript><script>localStorage.getItem("pref-theme")==="dark"?document.querySelector("html").dataset.theme="dark":localStorage.getItem("pref-theme")==="light"?document.querySelector("html").dataset.theme="light":window.matchMedia("(prefers-color-scheme: dark)").matches?document.querySelector("html").dataset.theme="dark":document.querySelector("html").dataset.theme="light"</script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-mll67QQG7kL7A1sFL1s0IcbK9GOGvegj6grkQHIjwBQ05vjY9U9Wc6sxIHrN6iGk crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-vpJtNq88iNGEZ14B2xFQv+HzS4xUeXUaW8js8NJNCFyKfDkbK7ZSP3qA7O3t0r8y crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-9pNnCSpDapGwYb9ZGWw4jyG1sRJb8i7Y36ce3g8e9KqjVL0woG5dnU2A0n0F3V4O crossorigin=anonymous onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}]})'></script><meta property="og:url" content="https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/"><meta property="og:site_name" content="Tiled Thoughts: A Verbose Debug Build"><meta property="og:title" content="Data Structure and Iterator Kung Fu in LLVM"><meta property="og:description" content="Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes."><meta property="og:locale" content="en-us"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-11-09T00:00:00+00:00"><meta property="article:modified_time" content="2025-11-09T00:00:00+00:00"><meta property="article:tag" content="LLVM"><meta property="article:tag" content="Data Structures"><meta property="article:tag" content="Iterators"><meta property="article:tag" content="Compilers"><meta property="article:tag" content="Performance"><meta property="article:tag" content="C++"><meta name=twitter:card content="summary"><meta name=twitter:title content="Data Structure and Iterator Kung Fu in LLVM"><meta name=twitter:description content="Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes."><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://samarthnarang.com/tiled-thoughts/posts/"},{"@type":"ListItem","position":2,"name":"Data Structure and Iterator Kung Fu in LLVM","item":"https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"Data Structure and Iterator Kung Fu in LLVM","name":"Data Structure and Iterator Kung Fu in LLVM","description":"Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.","keywords":["LLVM","Data Structures","Iterators","Compilers","Performance","C++"],"articleBody":" When to use SmallVector vs std::vector, why DenseMap feels like cheating, how StringRef \u0026 ArrayRef avoid copies, and the iterator tricks that make LLVM code elegant and fast.\nWhy LLVM ships its own containers LLVM’s Abstract Data Types (ADT) exist to minimize allocations, avoid unnecessary copies, and keep hot paths fast. They are battle-tested for compiler workloads: small objects, pointer-heavy graphs, predictable iteration patterns, stable string handling, and more.\nCore Value Types (which own nothing) StringRef StringRef is a non-owning reference to a string, i.e., it does not own the underlying data. By storing just a pointer and a length (it’s basically a (char*, size_t) pair), it is zero-copy by design.\nAPIs : front(), startswith(), contains(), drop_front(), consume_front(\"0x\"), split(), and many more.\nLifetime rule : The referenced memory must outlive the StringRef.\nArrayRef / MutableArrayRef Similar to StringRef, ArrayRef is a lightweight, non-owning reference to a contiguous array of elements of type T. ArrayRef ensures efficient access but the data is not modifiable; for that, use MutableArrayRef. Gotcha : Don’t create an ArrayRef from a temporary container, as the data may be destroyed immediately after. Twine Twine is a lightweight way to concatenate strings without creating intermediate copies. It represents a concatenation of strings as a tree structure, allowing efficient construction of complex strings on-the-fly. Rule : Don’t store a Twine, materialize with SmallString or std::string if you need to keep the result. Small-Size Optimized Containers SmallVector What: std::vector semantics with inline storage for up to N elements. Choose N: do profiling; balance spill overhead vs. stack usage. In the event of exceeding N, it seamlessly falls back to heap allocation, i.e., it behaves like a regular std::vector beyond that point. APIs: push_back, emplace_back, reserve, append, pop_back_val, and more. SmallVector\u003cValue*, 4\u003e WorkList; // Inline storage for 4 pointers WorkList.push_back(NewValue); // No heap allocation until size \u003e 4 while (!WorkList.empty()) { Value *V = WorkList.pop_back_val(); // Pops the last element // Process V... } SmallString A SmallVector specialized for strings. Some useful string helpers: str(), append(), push_back(), etc. SmallPtrSet A set optimized for storing a small number of pointers. Linear for small sizes, hash table for larger sizes. Great for tracking visited nodes in graph algorithms. SmallPtrSet\u003cBasicBlock*, 8\u003e Visited; for (BasicBlock \u0026BB : Function) { if (Visited.insert(\u0026BB).second) { // First time visiting BB } } “Hashy” Workhorses DenseMap / DenseSet What: Open-addressing hash table with a compact memory layout. Open addressing is a collision resolution method where all elements are stored within the hash table itself, avoiding the need for pointers to separate nodes. This leads to better cache locality and reduced memory overhead. Shines with: pointer keys, small keys, and frequent lookups. APIs: try_emplace, insert, find, erase, etc. Perf Tips: Reserve capacity upfront via reserve(expectedSize); rebuild if tombstones explode (DenseMap::shrink_and_clear()). DenseMap\u003cValue*, unsigned\u003e rank; for (auto \u0026I : instructions(F)) { rank.try_emplace(\u0026I, rank.size()); // Assign unique rank if not present } Custom Keys providing DenseMapInfo with: getEmptyKey() : A special key value representing an empty slot. getTombstoneKey() : A special key value representing a deleted slot Tombstones are special markers used in open-addressing hash tables to mean “this slot was occupied by a key but has since been deleted”. They help maintain the integrity of probing sequences during lookups and insertions.\ngetHashValue(const Key \u0026K) : A hash function for the key type. isEqual(const Key \u0026LHS, const Key \u0026RHS) : Equality comparison struct MyKey {int a; int b;}; template\u003c\u003e struct DenseMapInfo\u003cMyKey\u003e { static MyKey getEmptyKey() { return {INT_MIN, INT_MIN}; } // Use unlikely values static MyKey getTombstoneKey() { return {INT_MIN + 1, INT_MIN + 1}; } static unsigned getHashValue(const MyKey \u0026K) { return hash_combine(K.a, K.b); // Combine fields for hash } static bool isEqual(const MyKey \u0026LHS, const MyKey \u0026RHS) { return LHS.a == RHS.a \u0026\u0026 LHS.b == RHS.b; } }; StringMap A hash table mapping strings to values, optimized for string keys. Use when: when keys are owned and stable. StringMap\u003cunsigned\u003e NameToID; NameToID[\"foo\"]++; // Increment count for \"foo\" Erasing While Iterating When erasing elements from DenseMap or StringMap during iteration, use the following pattern to avoid invalidating the iterator:\nfor (auto It = Map.begin(); It != Map.end(); ) { if (it-\u003esecond == 0) it = Map.erase(It); // erase returns the next valid iterator else ++It; // only increment if not erasing } Arenas, Uniquing, and more BumpPtrAllocator Fast linear allocator for short-lived objects. Allocate many small objects quickly; free all at once. Pair with StringSaver to own strings cheaply. BumpPtrAllocator arena; StringSaver saver(arena); StringRef name = saver.save(\"temporary_name\"); // Owned by arena FoldingSet What: hash-cons an object based on its structural identity. Hash-consing is a popular functional programming technique to canonicalize identical immutable structures so that these structures are represented by a single heap node. The usefulness stems from the fact that large data structures often contain many identical substructures; when we want to check for equality between two structures, we can simply compare their pointers instead of traversing the entire structure.\nPattern: derive from FoldingSetNode, implement the Profile method, and use FoldingSet to store unique instances. struct Key : public FoldingSetNode { int a; StringRef b; void Profile(FoldingSetNodeID \u0026ID) const { ID.AddInteger(a); ID.AddString(b); } }; FoldingSet\u003cKey\u003e KeySet; void insertOrGet(int a, StringRef b, BumpPtrAllocator \u0026arena) { Key Temp{a, b}; void *InsertPos; if (Key *Existing = KeySet.FindNodeOrInsertPos(Temp, InsertPos)) { // hash-consed // Use Existing } else { Key *NewKey = new (arena.Allocate\u003cKey\u003e()) Key{a, saver.save(b)}; KeySet.InsertNode(NewKey, InsertPos); } } Error handling the LLVM way LLVM provides a rich set of utilities for error handling, including Error, Expected, and handleErrors. These abstractions allow for expressive and type-safe error propagation without relying on exceptions.\nReturn Expected on success or error. Consume: if (!E) return E.takeError(); - By default, llvm::Error objects are move-only; takeError() allows transferring ownership of the error to the caller for handling. Helpers: cantFail(E), handleErrors(E, ...), joinErrors(...). Expected\u003cstd::unique_ptr\u003cModule\u003e\u003e loadModule(StringRef Path, LLVMContext \u0026Ctx) { SMDiagnostic Err; std::unique_ptr\u003cModule\u003e M = parseIRFile(Path, Err, Ctx); if (!M) return createStringError(inconvertibleErrorCode(), \"Failed to parse IR file\"); return std::move(M); } IR-Centric Must-Knows Traversal Idioms for (Function \u0026F : M) { // Look at all functions in Module M. for (BasicBlock \u0026BB : F) { // Look at all basic blocks in Function F. for (Instruction \u0026I : BB) { // Look at all instructions in BasicBlock BB. // Process instruction I } } } for (Use \u0026U : V-\u003euses()) { // Look at all uses of Value v. if (auto *I = dyn_cast\u003cInstruction\u003e(U.getUser())) { // Process instruction I that uses V } } for (Value *op : I.operands()) { // Look at all operands of Instruction I. // Process operand op } for(Use \u0026U : I.operands()) { // Mutable access to operands // Mutate operand U } Mutation Safety Early-inc: Use make_early_inc_range when mutating a container while iterating over it. for (Instruction \u0026I : make_early_inc_range(BB)) { // Safe to mutate BB while iterating I.eraseFromParent(); // Safe to erase while iterating } CFG Helpers predecessors(BB), successors(BB): Iterate over predecessor/successor basic blocks. LoopBlocksTraversal : DFS traversal of loop blocks; ReversePostOrderTraversal : RPO traversal of CFG. for (BasicBlock *Pred : predecessors(\u0026BB)) { // Process predecessor Pred } for (BasicBlock *BB : ReversePostOrderTraversal(\u0026F)) { // Process BB in RPO } Range and Iterator (Halloween!) Candy enumerate(range): [index, element] pairs. filter(range, predicate): Filter elements by predicate. map_range(range, func): Transform elements by func. zip(range1, range2, ...) : Tuple-wise iteration reverse(range): Reverse iteration. Choosing the Right Data Structure (A Decision Matrix) Need Pick Why ≤ N typical, latency-sensitive SmallVector avoids heap Pointer membership/visited SmallPtrSet inline + hash Many lookups, pointer/int keys DenseMap/Set cache-friendly String keys, own them StringMap single alloc Non-owning string/array view StringRef / ArrayRef zero copy Thousands of short-lived nodes BumpPtrAllocator linear alloc Structural dedup FoldingSet profile-based hashcons Common “Shooting Yourself in the Foot” Pitfalls Dangling StringRef: don’t reference temporaries. Instead, use StringSaver. Erasing while iterating : early_inc_range SmallVector spill : choose N wisely. DenseMap tombstone bloat : Use reserve(), and periodically rebuild(). Micro-Benchmarks Let’s look at a simple harness comparing DenseMap vs std::unordered_map for pointer keys.\n#include \"llvm/ADT/DenseMap.h\" #include #include #include using namespace llvm; int main() { constexpr size_t N = 100000; std::vector\u003cvoid*\u003e keys(N); for (size_t i=0;i\u003cN;++i) keys[i] = reinterpret_cast\u003cvoid*\u003e((i+1)*16); DenseMap\u003cvoid*, int\u003e dm; dm.reserve(N); auto t0 = std::chrono::high_resolution_clock::now(); for (size_t i=0;i\u003cN;++i) dm.try_emplace(keys[i], (int)i); auto t1 = std::chrono::high_resolution_clock::now(); std::unordered_map\u003cvoid*, int\u003e um; um.reserve(N); for (size_t i=0;i\u003cN;++i) um.emplace(keys[i], (int)i); auto t2 = std::chrono::high_resolution_clock::now(); auto ns1 = std::chrono::duration_cast\u003cstd::chrono::nanoseconds\u003e(t1-t0).count(); auto ns2 = std::chrono::duration_cast\u003cstd::chrono::nanoseconds\u003e(t2-t1).count(); printf(\"DenseMap insert: %lld ns, unordered_map insert: %lld ns\\n\", (long long)ns1, (long long)ns2); } When run, you should see DenseMap outperforming std::unordered_map significantly for pointer keys due to its cache-friendly design and lower overhead.\nCompile and Run clang++ bench.cpp -O3 -I/path/to/llvm/include -o bench ./bench DenseMap insert: 298833 ns, unordered_map insert: 50096584 ns From this simple benchmark, we observe that DenseMap is orders of magnitude faster than std::unordered_map for pointer keys, highlighting its efficiency for compiler workloads. Do more extensive benchmarking using perf!\nConclusion LLVM’s ADT library provides a rich set of data structures and iterator patterns optimized for compiler workloads. By leveraging these tools effectively, you can write passes that are both efficient and maintainable. Understanding when and how to use these structures is key to mastering LLVM development. Happy coding!\n","wordCount":"1518","inLanguage":"en","datePublished":"2025-11-09T00:00:00Z","dateModified":"2025-11-09T00:00:00Z","author":{"@type":"Person","name":"Samarth Narang"},"mainEntityOfPage":{"@type":"WebPage","@id":"https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/"},"publisher":{"@type":"Organization","name":"Tiled Thoughts: A Verbose Debug Build","logo":{"@type":"ImageObject","url":"https://samarthnarang.com/tiled-thoughts/favicon.ico"}}}</script></head><body id=top><header class=header><nav class=nav><div class=logo><a href=https://samarthnarang.com/tiled-thoughts/ accesskey=h title="Tiled Thoughts: A Verbose Debug Build (Alt + H)">Tiled Thoughts: A Verbose Debug Build</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
-<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu><li><a href=https://samarthnarang.com title=Home><span>Home</span>&nbsp;
-<svg fill="none" shape-rendering="geometricPrecision" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" height="12" width="12"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a></li></ul></nav></header><main class=main><article class=post-single><header class=post-header><div class=breadcrumbs><a href=https://samarthnarang.com/tiled-thoughts/>Home</a>&nbsp;»&nbsp;<a href=https://samarthnarang.com/tiled-thoughts/posts/>Posts</a></div><h1 class="post-title entry-hint-parent">Data Structure and Iterator Kung Fu in LLVM</h1><div class=post-description>Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.</div><div class=post-meta><span title='2025-11-09 00:00:00 +0000 UTC'>November 9, 2025</span>&nbsp;·&nbsp;<span>8 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></div></header><div class=toc><details><summary accesskey=c title="(Alt + C)"><span class=details>Table of Contents</span></summary><div class=inner><ul><li><a href=#why-llvm-ships-its-own-containers aria-label="Why LLVM ships its own containers">Why LLVM ships its own containers</a></li><li><a href=#core-value-types-which-own-nothing aria-label="Core Value Types (which own nothing)">Core Value Types (which own nothing)</a><ul><li><a href=#stringref aria-label=StringRef>StringRef</a></li><li><a href=#arrayref--mutablearrayref aria-label="ArrayRef / MutableArrayRef">ArrayRef / MutableArrayRef</a></li><li><a href=#twine aria-label=Twine>Twine</a></li></ul></li><li><a href=#small-size-optimized-containers aria-label="Small-Size Optimized Containers">Small-Size Optimized Containers</a><ul><li><a href=#smallvectort-n aria-label="SmallVector<T, N>">SmallVector&lt;T, N></a></li><li><a href=#smallstring aria-label=SmallString>SmallString</a></li><li><a href=#smallptrsett-n aria-label="SmallPtrSet<T*, N>">SmallPtrSet&lt;T*, N></a></li></ul></li><li><a href=#hashy-workhorses aria-label="&ldquo;Hashy&rdquo; Workhorses">&ldquo;Hashy&rdquo; Workhorses</a><ul><li><a href=#densemapkeyt-valuet--denseset aria-label="DenseMap<KeyT, ValueT> / DenseSet">DenseMap&lt;KeyT, ValueT> / DenseSet</a><ul><li><a href=#custom-keys-providing-densemapinfokey-with aria-label="Custom Keys providing DenseMapInfo<Key> with:">Custom Keys providing DenseMapInfo&lt;Key> with:</a></li></ul></li><li><a href=#stringmap aria-label=StringMap>StringMap</a><ul><li><a href=#erasing-while-iterating aria-label="Erasing While Iterating">Erasing While Iterating</a></li></ul></li></ul></li><li><a href=#arenas-uniquing-and-more aria-label="Arenas, Uniquing, and more">Arenas, Uniquing, and more</a><ul><li><a href=#bumpptrallocator aria-label=BumpPtrAllocator>BumpPtrAllocator</a></li><li><a href=#foldingset aria-label=FoldingSet>FoldingSet</a></li></ul></li><li><a href=#error-handling-the-llvm-way aria-label="Error handling the LLVM way">Error handling the LLVM way</a></li><li><a href=#ir-centric-must-knows aria-label="IR-Centric Must-Knows">IR-Centric Must-Knows</a><ul><li><a href=#traversal-idioms aria-label="Traversal Idioms">Traversal Idioms</a></li><li><a href=#mutation-safety aria-label="Mutation Safety">Mutation Safety</a></li><li><a href=#cfg-helpers aria-label="CFG Helpers">CFG Helpers</a></li><li><a href=#range-and-iterator-halloween-candy aria-label="Range and Iterator (Halloween!) Candy">Range and Iterator (Halloween!) Candy</a></li><li><a href=#choosing-the-right-data-structure-a-decision-matrix aria-label="Choosing the Right Data Structure (A Decision Matrix)">Choosing the Right Data Structure (A Decision Matrix)</a></li><li><a href=#common-shooting-yourself-in-the-foot-pitfalls aria-label="Common &ldquo;Shooting Yourself in the Foot&rdquo; Pitfalls">Common &ldquo;Shooting Yourself in the Foot&rdquo; Pitfalls</a></li></ul></li><li><a href=#micro-benchmarks aria-label=Micro-Benchmarks>Micro-Benchmarks</a><ul><li><a href=#compile-and-run aria-label="Compile and Run">Compile and Run</a></li></ul></li><li><a href=#conclusion aria-label=Conclusion>Conclusion</a></li></ul></div></details></div><div class=post-content><blockquote><p>When to use SmallVector vs std::vector, why DenseMap feels like cheating, how StringRef & ArrayRef avoid copies, and the iterator tricks that make LLVM code elegant and fast.</p></blockquote><h2 id=why-llvm-ships-its-own-containers>Why LLVM ships its own containers<a hidden class=anchor aria-hidden=true href=#why-llvm-ships-its-own-containers>#</a></h2><p>LLVM&rsquo;s Abstract Data Types (ADT) exist to minimize allocations, avoid unnecessary copies, and keep hot paths fast. They are battle-tested for compiler workloads: small objects, pointer-heavy graphs, predictable iteration patterns, stable string handling, and more.</p><h2 id=core-value-types-which-own-nothing>Core Value Types (which own nothing)<a hidden class=anchor aria-hidden=true href=#core-value-types-which-own-nothing>#</a></h2><h3 id=stringref>StringRef<a hidden class=anchor aria-hidden=true href=#stringref>#</a></h3><ul><li><p><code>StringRef</code> is a <code>non-owning</code> reference to a string, i.e., it does not own the underlying data. By storing just a pointer and a length (it&rsquo;s basically a <code>(char*, size_t)</code> pair), it is <em>zero-copy</em> by design.</p></li><li><p><strong>APIs</strong> : <code>front()</code>, <code>startswith()</code>, <code>contains()</code>, <code>drop_front()</code>, <code>consume_front("0x")</code>, <code>split()</code>, and many more.</p></li><li><p><strong>Lifetime rule</strong> : The referenced memory must outlive the <code>StringRef</code>.</p></li></ul><h3 id=arrayref--mutablearrayref>ArrayRef<t> / MutableArrayRef<t><a hidden class=anchor aria-hidden=true href=#arrayref--mutablearrayref>#</a></h3><ul><li>Similar to <code>StringRef</code>, <code>ArrayRef&lt;T></code> is a lightweight, non-owning reference to a contiguous array of elements of type <code>T</code>. <code>ArrayRef</code> ensures efficient access but the data is not modifiable; for that, use <code>MutableArrayRef&lt;T></code>.</li><li><strong>Gotcha</strong> : Don&rsquo;t create an <code>ArrayRef</code> from a temporary container, as the data may be destroyed immediately after.</li></ul><h3 id=twine>Twine<a hidden class=anchor aria-hidden=true href=#twine>#</a></h3><ul><li><code>Twine</code> is a lightweight way to concatenate strings without creating intermediate copies. It represents a concatenation of strings as a tree structure, allowing efficient construction of complex strings on-the-fly.</li><li><strong>Rule</strong> : Don&rsquo;t store a <code>Twine</code>, materialize with <code>SmallString</code> or <code>std::string</code> if you need to keep the result.</li></ul><h2 id=small-size-optimized-containers>Small-Size Optimized Containers<a hidden class=anchor aria-hidden=true href=#small-size-optimized-containers>#</a></h2><h3 id=smallvectort-n>SmallVector&lt;T, N><a hidden class=anchor aria-hidden=true href=#smallvectort-n>#</a></h3><ul><li><strong>What</strong>: <code>std::vector</code> semantics with inline storage for up to <code>N</code> elements.</li><li>Choose <code>N</code>: do profiling; balance spill overhead vs. stack usage.</li><li>In the event of exceeding <code>N</code>, it seamlessly falls back to heap allocation, i.e., it behaves like a regular <code>std::vector</code> beyond that point.</li><li><strong>APIs</strong>: <code>push_back</code>, <code>emplace_back</code>, <code>reserve</code>, <code>append</code>, <code>pop_back_val</code>, and more.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>SmallVector<span style=color:#f92672>&lt;</span>Value<span style=color:#f92672>*</span>, <span style=color:#ae81ff>4</span><span style=color:#f92672>&gt;</span> WorkList; <span style=color:#75715e>// Inline storage for 4 pointers
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>WorkList.push_back(NewValue); <span style=color:#75715e>// No heap allocation until size &gt; 4
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>while</span> (<span style=color:#f92672>!</span>WorkList.empty()) {
-</span></span><span style=display:flex><span>    Value <span style=color:#f92672>*</span>V <span style=color:#f92672>=</span> WorkList.pop_back_val(); <span style=color:#75715e>// Pops the last element
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#75715e>// Process V...
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span></code></pre></div><h3 id=smallstring>SmallString<n><a hidden class=anchor aria-hidden=true href=#smallstring>#</a></h3><ul><li>A <code>SmallVector&lt;char, N></code> specialized for strings.</li><li>Some useful string helpers: <code>str()</code>, <code>append()</code>, <code>push_back()</code>, etc.</li></ul><h3 id=smallptrsett-n>SmallPtrSet&lt;T*, N><a hidden class=anchor aria-hidden=true href=#smallptrsett-n>#</a></h3><ul><li>A set optimized for storing a small number of pointers.<ul><li>Linear for small sizes, hash table for larger sizes.</li></ul></li><li><strong>Great for</strong> tracking visited nodes in graph algorithms.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>SmallPtrSet<span style=color:#f92672>&lt;</span>BasicBlock<span style=color:#f92672>*</span>, <span style=color:#ae81ff>8</span><span style=color:#f92672>&gt;</span> Visited;
-</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> (BasicBlock <span style=color:#f92672>&amp;</span>BB : Function) {
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (Visited.insert(<span style=color:#f92672>&amp;</span>BB).second) {
-</span></span><span style=display:flex><span>        <span style=color:#75715e>// First time visiting BB
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    }
-</span></span><span style=display:flex><span>}
-</span></span></code></pre></div><h2 id=hashy-workhorses>&ldquo;Hashy&rdquo; Workhorses<a hidden class=anchor aria-hidden=true href=#hashy-workhorses>#</a></h2><h3 id=densemapkeyt-valuet--denseset>DenseMap&lt;KeyT, ValueT> / DenseSet<keyt><a hidden class=anchor aria-hidden=true href=#densemapkeyt-valuet--denseset>#</a></h3><ul><li><strong>What</strong>: Open-addressing hash table with a compact memory layout.<ul><li>Open addressing is a collision resolution method where all elements are stored within the hash table itself, avoiding the need for pointers to separate nodes. This leads to better cache locality and reduced memory overhead.</li></ul></li><li><strong>Shines with</strong>: pointer keys, small keys, and frequent lookups.</li><li><strong>APIs</strong>: <code>try_emplace</code>, <code>insert</code>, <code>find</code>, <code>erase</code>, etc.</li><li><strong>Perf Tips</strong>: Reserve capacity upfront via <code>reserve(expectedSize)</code>; rebuild if tombstones explode (<code>DenseMap::shrink_and_clear()</code>).</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>DenseMap<span style=color:#f92672>&lt;</span>Value<span style=color:#f92672>*</span>, <span style=color:#66d9ef>unsigned</span><span style=color:#f92672>&gt;</span> rank;
-</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> (<span style=color:#66d9ef>auto</span> <span style=color:#f92672>&amp;</span>I : instructions(F)) {
-</span></span><span style=display:flex><span>    rank.try_emplace(<span style=color:#f92672>&amp;</span>I, rank.size()); <span style=color:#75715e>// Assign unique rank if not present
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span></code></pre></div><h4 id=custom-keys-providing-densemapinfokey-with>Custom Keys providing <code>DenseMapInfo&lt;Key></code> with:<a hidden class=anchor aria-hidden=true href=#custom-keys-providing-densemapinfokey-with>#</a></h4><ul><li><code>getEmptyKey()</code> : A special key value representing an empty slot.</li><li><code>getTombstoneKey()</code> : A special key value representing a deleted slot<blockquote><p>Tombstones are special markers used in open-addressing hash tables to mean &ldquo;this slot was occupied by a key but has since been deleted&rdquo;. They help maintain the integrity of probing sequences during lookups and insertions.</p></blockquote></li><li><code>getHashValue(const Key &amp;K)</code> : A hash function for the key type.</li><li><code>isEqual(const Key &amp;LHS, const Key &amp;RHS)</code> : Equality comparison</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>MyKey</span> {<span style=color:#66d9ef>int</span> a; <span style=color:#66d9ef>int</span> b;};
-</span></span><span style=display:flex><span><span style=color:#66d9ef>template</span><span style=color:#f92672>&lt;&gt;</span> <span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>DenseMapInfo</span><span style=color:#f92672>&lt;</span>MyKey<span style=color:#f92672>&gt;</span> {
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>static</span> MyKey <span style=color:#a6e22e>getEmptyKey</span>() { <span style=color:#66d9ef>return</span> {INT_MIN, INT_MIN}; } <span style=color:#75715e>// Use unlikely values
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>  <span style=color:#66d9ef>static</span> MyKey <span style=color:#a6e22e>getTombstoneKey</span>() { <span style=color:#66d9ef>return</span> {INT_MIN <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>, INT_MIN <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>}; } 
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>unsigned</span> <span style=color:#a6e22e>getHashValue</span>(<span style=color:#66d9ef>const</span> MyKey <span style=color:#f92672>&amp;</span>K) {
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> hash_combine(K.a, K.b); <span style=color:#75715e>// Combine fields for hash
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>  }
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>static</span> <span style=color:#66d9ef>bool</span> <span style=color:#a6e22e>isEqual</span>(<span style=color:#66d9ef>const</span> MyKey <span style=color:#f92672>&amp;</span>LHS, <span style=color:#66d9ef>const</span> MyKey <span style=color:#f92672>&amp;</span>RHS) {
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> LHS.a <span style=color:#f92672>==</span> RHS.a <span style=color:#f92672>&amp;&amp;</span> LHS.b <span style=color:#f92672>==</span> RHS.b;
-</span></span><span style=display:flex><span>  }
-</span></span><span style=display:flex><span>};
-</span></span></code></pre></div><h3 id=stringmap>StringMap<t><a hidden class=anchor aria-hidden=true href=#stringmap>#</a></h3><ul><li>A hash table mapping strings to values, optimized for string keys.</li><li><strong>Use when</strong>: when keys are owned and stable.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>StringMap<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>unsigned</span><span style=color:#f92672>&gt;</span> NameToID;
-</span></span><span style=display:flex><span>NameToID[<span style=color:#e6db74>&#34;foo&#34;</span>]<span style=color:#f92672>++</span>; <span style=color:#75715e>// Increment count for &#34;foo&#34;
-</span></span></span></code></pre></div><h4 id=erasing-while-iterating>Erasing While Iterating<a hidden class=anchor aria-hidden=true href=#erasing-while-iterating>#</a></h4><p>When erasing elements from <code>DenseMap</code> or <code>StringMap</code> during iteration, use the following pattern to avoid invalidating the iterator:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>for</span> (<span style=color:#66d9ef>auto</span> It <span style=color:#f92672>=</span> Map.begin(); It <span style=color:#f92672>!=</span> Map.end(); ) {
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (it<span style=color:#f92672>-&gt;</span>second <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) it <span style=color:#f92672>=</span> Map.erase(It); <span style=color:#75715e>// erase returns the next valid iterator
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>else</span> <span style=color:#f92672>++</span>It; <span style=color:#75715e>// only increment if not erasing
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span></code></pre></div><h2 id=arenas-uniquing-and-more>Arenas, Uniquing, and more<a hidden class=anchor aria-hidden=true href=#arenas-uniquing-and-more>#</a></h2><h3 id=bumpptrallocator>BumpPtrAllocator<a hidden class=anchor aria-hidden=true href=#bumpptrallocator>#</a></h3><ul><li>Fast linear allocator for short-lived objects.</li><li>Allocate many small objects quickly; free all at once.</li><li>Pair with <code>StringSaver</code> to own strings cheaply.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>BumpPtrAllocator arena;
-</span></span><span style=display:flex><span>StringSaver <span style=color:#a6e22e>saver</span>(arena);
-</span></span><span style=display:flex><span>StringRef name <span style=color:#f92672>=</span> saver.save(<span style=color:#e6db74>&#34;temporary_name&#34;</span>); <span style=color:#75715e>// Owned by arena
-</span></span></span></code></pre></div><h3 id=foldingset>FoldingSet<t><a hidden class=anchor aria-hidden=true href=#foldingset>#</a></h3><ul><li><strong>What</strong>: hash-cons an object based on its structural identity.<blockquote><p><em>Hash-consing</em> is a popular functional programming technique to canonicalize identical immutable structures so that these structures are represented by a single heap node. The usefulness stems from the fact that large data structures often contain many identical substructures; when we want to check for equality between two structures, we can simply compare their pointers instead of traversing the entire structure.</p></blockquote></li><li><strong>Pattern</strong>: derive from <code>FoldingSetNode</code>, implement the <code>Profile</code> method, and use <code>FoldingSet</code> to store unique instances.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>Key</span> <span style=color:#f92672>:</span> <span style=color:#66d9ef>public</span> FoldingSetNode {
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>int</span> a;
-</span></span><span style=display:flex><span>    StringRef b;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>Profile</span>(FoldingSetNodeID <span style=color:#f92672>&amp;</span>ID) <span style=color:#66d9ef>const</span> {
-</span></span><span style=display:flex><span>        ID.AddInteger(a);
-</span></span><span style=display:flex><span>        ID.AddString(b);
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>};
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>FoldingSet<span style=color:#f92672>&lt;</span>Key<span style=color:#f92672>&gt;</span> KeySet;
-</span></span><span style=display:flex><span><span style=color:#66d9ef>void</span> <span style=color:#a6e22e>insertOrGet</span>(<span style=color:#66d9ef>int</span> a, StringRef b, BumpPtrAllocator <span style=color:#f92672>&amp;</span>arena) {
-</span></span><span style=display:flex><span>    Key Temp{a, b};
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>void</span> <span style=color:#f92672>*</span>InsertPos;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (Key <span style=color:#f92672>*</span>Existing <span style=color:#f92672>=</span> KeySet.FindNodeOrInsertPos(Temp, InsertPos)) { <span style=color:#75715e>// hash-consed
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        <span style=color:#75715e>// Use Existing
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    } <span style=color:#66d9ef>else</span> {
-</span></span><span style=display:flex><span>        Key <span style=color:#f92672>*</span>NewKey <span style=color:#f92672>=</span> <span style=color:#66d9ef>new</span> (arena.Allocate<span style=color:#f92672>&lt;</span>Key<span style=color:#f92672>&gt;</span>()) Key{a, saver.save(b)};
-</span></span><span style=display:flex><span>        KeySet.InsertNode(NewKey, InsertPos);
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>}
-</span></span></code></pre></div><h2 id=error-handling-the-llvm-way>Error handling the LLVM way<a hidden class=anchor aria-hidden=true href=#error-handling-the-llvm-way>#</a></h2><p>LLVM provides a rich set of utilities for error handling, including <code>Error</code>, <code>Expected&lt;T></code>, and <code>handleErrors</code>. These abstractions allow for expressive and type-safe error propagation without relying on exceptions.</p><ul><li><strong>Return</strong> <code>Expected&lt;T></code> on success or error.</li><li><strong>Consume</strong>: <code>if (!E) return E.takeError();</code> - By default, <code>llvm::Error</code> objects are move-only; <code>takeError()</code> allows transferring ownership of the error to the caller for handling.</li><li><strong>Helpers</strong>: <code>cantFail(E)</code>, <code>handleErrors(E, ...)</code>, <code>joinErrors(...)</code>.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span>Expected<span style=color:#f92672>&lt;</span>std<span style=color:#f92672>::</span>unique_ptr<span style=color:#f92672>&lt;</span>Module<span style=color:#f92672>&gt;&gt;</span> loadModule(StringRef Path, LLVMContext <span style=color:#f92672>&amp;</span>Ctx) {
-</span></span><span style=display:flex><span>    SMDiagnostic Err;
-</span></span><span style=display:flex><span>    std<span style=color:#f92672>::</span>unique_ptr<span style=color:#f92672>&lt;</span>Module<span style=color:#f92672>&gt;</span> M <span style=color:#f92672>=</span> parseIRFile(Path, Err, Ctx);
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (<span style=color:#f92672>!</span>M) <span style=color:#66d9ef>return</span> createStringError(inconvertibleErrorCode(), <span style=color:#e6db74>&#34;Failed to parse IR file&#34;</span>);
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> std<span style=color:#f92672>::</span>move(M);
-</span></span><span style=display:flex><span>}
-</span></span></code></pre></div><h2 id=ir-centric-must-knows>IR-Centric Must-Knows<a hidden class=anchor aria-hidden=true href=#ir-centric-must-knows>#</a></h2><h3 id=traversal-idioms>Traversal Idioms<a hidden class=anchor aria-hidden=true href=#traversal-idioms>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>for</span> (Function <span style=color:#f92672>&amp;</span>F : M) { <span style=color:#75715e>// Look at all functions in Module M.
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>for</span> (BasicBlock <span style=color:#f92672>&amp;</span>BB : F) { <span style=color:#75715e>// Look at all basic blocks in Function F.
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        <span style=color:#66d9ef>for</span> (Instruction <span style=color:#f92672>&amp;</span>I : BB) { <span style=color:#75715e>// Look at all instructions in BasicBlock BB.
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#75715e>// Process instruction I
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        }
-</span></span><span style=display:flex><span>    }
-</span></span><span style=display:flex><span>}
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> (Use <span style=color:#f92672>&amp;</span>U : V<span style=color:#f92672>-&gt;</span>uses()) { <span style=color:#75715e>// Look at all uses of Value v.
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>if</span> (<span style=color:#66d9ef>auto</span> <span style=color:#f92672>*</span>I <span style=color:#f92672>=</span> dyn_cast<span style=color:#f92672>&lt;</span>Instruction<span style=color:#f92672>&gt;</span>(U.getUser())) {
-</span></span><span style=display:flex><span>        <span style=color:#75715e>// Process instruction I that uses V
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    }
-</span></span><span style=display:flex><span>}
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> (Value <span style=color:#f92672>*</span>op : I.operands()) { <span style=color:#75715e>// Look at all operands of Instruction I.
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#75715e>// Process operand op
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span>(Use <span style=color:#f92672>&amp;</span>U : I.operands()) { <span style=color:#75715e>// Mutable access to operands
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#75715e>// Mutate operand U
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span></code></pre></div><h3 id=mutation-safety>Mutation Safety<a hidden class=anchor aria-hidden=true href=#mutation-safety>#</a></h3><ul><li><strong>Early-inc</strong>: Use <code>make_early_inc_range</code> when mutating a container while iterating over it.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>for</span> (Instruction <span style=color:#f92672>&amp;</span>I : make_early_inc_range(BB)) { <span style=color:#75715e>// Safe to mutate BB while iterating
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    I.eraseFromParent(); <span style=color:#75715e>// Safe to erase while iterating
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span></code></pre></div><h3 id=cfg-helpers>CFG Helpers<a hidden class=anchor aria-hidden=true href=#cfg-helpers>#</a></h3><ul><li><code>predecessors(BB)</code>, <code>successors(BB)</code>: Iterate over predecessor/successor basic blocks.</li><li><code>LoopBlocksTraversal</code> : DFS traversal of loop blocks; <code>ReversePostOrderTraversal</code> : RPO traversal of CFG.</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#66d9ef>for</span> (BasicBlock <span style=color:#f92672>*</span>Pred : predecessors(<span style=color:#f92672>&amp;</span>BB)) {
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// Process predecessor Pred
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> (BasicBlock <span style=color:#f92672>*</span>BB : ReversePostOrderTraversal(<span style=color:#f92672>&amp;</span>F)) {
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// Process BB in RPO
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}
-</span></span></code></pre></div><h3 id=range-and-iterator-halloween-candy>Range and Iterator (Halloween!) Candy<a hidden class=anchor aria-hidden=true href=#range-and-iterator-halloween-candy>#</a></h3><ul><li><code>enumerate(range)</code>: <code>[index, element]</code> pairs.</li><li><code>filter(range, predicate)</code>: Filter elements by predicate.</li><li><code>map_range(range, func)</code>: Transform elements by func.</li><li><code>zip(range1, range2, ...)</code> : Tuple-wise iteration</li><li><code>reverse(range)</code>: Reverse iteration.</li></ul><h3 id=choosing-the-right-data-structure-a-decision-matrix>Choosing the Right Data Structure (A Decision Matrix)<a hidden class=anchor aria-hidden=true href=#choosing-the-right-data-structure-a-decision-matrix>#</a></h3><table><thead><tr><th>Need</th><th>Pick</th><th>Why</th></tr></thead><tbody><tr><td>≤ N typical, latency-sensitive</td><td><code>SmallVector&lt;T,N></code></td><td>avoids heap</td></tr><tr><td>Pointer membership/visited</td><td><code>SmallPtrSet&lt;T*,N></code></td><td>inline + hash</td></tr><tr><td>Many lookups, pointer/int keys</td><td><code>DenseMap/Set</code></td><td>cache-friendly</td></tr><tr><td>String keys, own them</td><td><code>StringMap&lt;T></code></td><td>single alloc</td></tr><tr><td>Non-owning string/array view</td><td><code>StringRef</code> / <code>ArrayRef</code></td><td>zero copy</td></tr><tr><td>Thousands of short-lived nodes</td><td><code>BumpPtrAllocator</code></td><td>linear alloc</td></tr><tr><td>Structural dedup</td><td><code>FoldingSet&lt;T></code></td><td>profile-based hashcons</td></tr></tbody></table><h3 id=common-shooting-yourself-in-the-foot-pitfalls>Common &ldquo;Shooting Yourself in the Foot&rdquo; Pitfalls<a hidden class=anchor aria-hidden=true href=#common-shooting-yourself-in-the-foot-pitfalls>#</a></h3><ul><li><strong>Dangling</strong> <code>StringRef</code>: don&rsquo;t reference temporaries. Instead, use <code>StringSaver</code>.</li><li><strong>Erasing while iterating</strong> : <code>early_inc_range</code></li><li><code>SmallVector</code> <strong>spill</strong> : choose <code>N</code> wisely.</li><li><code>DenseMap</code> <strong>tombstone bloat</strong> : Use <code>reserve()</code>, and periodically <code>rebuild()</code>.</li></ul><h2 id=micro-benchmarks>Micro-Benchmarks<a hidden class=anchor aria-hidden=true href=#micro-benchmarks>#</a></h2><p>Let&rsquo;s look at a simple harness comparing <code>DenseMap</code> vs <code>std::unordered_map</code> for pointer keys.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=display:flex><span><span style=color:#75715e>#include</span> <span style=color:#75715e>&#34;llvm/ADT/DenseMap.h&#34;</span><span style=color:#75715e>
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;unordered_map&gt;</span><span style=color:#75715e>
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;chrono&gt;</span><span style=color:#75715e>
-</span></span></span><span style=display:flex><span><span style=color:#75715e>#include</span> <span style=color:#75715e>&lt;random&gt;</span><span style=color:#75715e>
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>using</span> <span style=color:#66d9ef>namespace</span> llvm;
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>int</span> <span style=color:#a6e22e>main</span>() {
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>constexpr</span> size_t N <span style=color:#f92672>=</span> <span style=color:#ae81ff>100000</span>;
-</span></span><span style=display:flex><span>  std<span style=color:#f92672>::</span>vector<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>void</span><span style=color:#f92672>*&gt;</span> keys(N);
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>for</span> (size_t i<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>;i<span style=color:#f92672>&lt;</span>N;<span style=color:#f92672>++</span>i) keys[i] <span style=color:#f92672>=</span> <span style=color:#66d9ef>reinterpret_cast</span><span style=color:#f92672>&lt;</span><span style=color:#66d9ef>void</span><span style=color:#f92672>*&gt;</span>((i<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>)<span style=color:#f92672>*</span><span style=color:#ae81ff>16</span>);
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  DenseMap<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>void</span><span style=color:#f92672>*</span>, <span style=color:#66d9ef>int</span><span style=color:#f92672>&gt;</span> dm; dm.reserve(N);
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>auto</span> t0 <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>chrono<span style=color:#f92672>::</span>high_resolution_clock<span style=color:#f92672>::</span>now();
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>for</span> (size_t i<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>;i<span style=color:#f92672>&lt;</span>N;<span style=color:#f92672>++</span>i) dm.try_emplace(keys[i], (<span style=color:#66d9ef>int</span>)i);
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>auto</span> t1 <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>chrono<span style=color:#f92672>::</span>high_resolution_clock<span style=color:#f92672>::</span>now();
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  std<span style=color:#f92672>::</span>unordered_map<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>void</span><span style=color:#f92672>*</span>, <span style=color:#66d9ef>int</span><span style=color:#f92672>&gt;</span> um; um.reserve(N);
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>for</span> (size_t i<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>;i<span style=color:#f92672>&lt;</span>N;<span style=color:#f92672>++</span>i) um.emplace(keys[i], (<span style=color:#66d9ef>int</span>)i);
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>auto</span> t2 <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>chrono<span style=color:#f92672>::</span>high_resolution_clock<span style=color:#f92672>::</span>now();
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>auto</span> ns1 <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>chrono<span style=color:#f92672>::</span>duration_cast<span style=color:#f92672>&lt;</span>std<span style=color:#f92672>::</span>chrono<span style=color:#f92672>::</span>nanoseconds<span style=color:#f92672>&gt;</span>(t1<span style=color:#f92672>-</span>t0).count();
-</span></span><span style=display:flex><span>  <span style=color:#66d9ef>auto</span> ns2 <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>chrono<span style=color:#f92672>::</span>duration_cast<span style=color:#f92672>&lt;</span>std<span style=color:#f92672>::</span>chrono<span style=color:#f92672>::</span>nanoseconds<span style=color:#f92672>&gt;</span>(t2<span style=color:#f92672>-</span>t1).count();
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>  printf(<span style=color:#e6db74>&#34;DenseMap insert: %lld ns, unordered_map insert: %lld ns</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#34;</span>,
-</span></span><span style=display:flex><span>         (<span style=color:#66d9ef>long</span> <span style=color:#66d9ef>long</span>)ns1, (<span style=color:#66d9ef>long</span> <span style=color:#66d9ef>long</span>)ns2);
-</span></span><span style=display:flex><span>}
-</span></span></code></pre></div><p>When run, you should see <code>DenseMap</code> outperforming <code>std::unordered_map</code> significantly for pointer keys due to its cache-friendly design and lower overhead.</p><h3 id=compile-and-run>Compile and Run<a hidden class=anchor aria-hidden=true href=#compile-and-run>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>clang++ bench.cpp -O3 -I/path/to/llvm/include -o bench
-</span></span><span style=display:flex><span>./bench
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>DenseMap insert: <span style=color:#ae81ff>298833</span> ns, unordered_map insert: <span style=color:#ae81ff>50096584</span> ns
-</span></span></code></pre></div><p>From this simple benchmark, we observe that <code>DenseMap</code> is orders of magnitude faster than <code>std::unordered_map</code> for pointer keys, highlighting its efficiency for compiler workloads. Do more extensive benchmarking using <code>perf</code>!</p><h2 id=conclusion>Conclusion<a hidden class=anchor aria-hidden=true href=#conclusion>#</a></h2><p>LLVM&rsquo;s ADT library provides a rich set of data structures and iterator patterns optimized for compiler workloads. By leveraging these tools effectively, you can write passes that are both efficient and maintainable. Understanding when and how to use these structures is key to mastering LLVM development. Happy coding!</p></div><footer class=post-footer><ul class=post-tags><li><a href=https://samarthnarang.com/tiled-thoughts/tags/llvm/>LLVM</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/data-structures/>Data Structures</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/iterators/>Iterators</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/compilers/>Compilers</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/performance/>Performance</a></li><li><a href=https://samarthnarang.com/tiled-thoughts/tags/c++/>C++</a></li></ul><nav class=paginav><a class=prev href=https://samarthnarang.com/tiled-thoughts/posts/multi-gpu-comm/><span class=title>« Prev</span><br><span>How GPUs Talk: A Practical Guide to Multi-GPU Training and Communication</span>
-</a><a class=next href=https://samarthnarang.com/tiled-thoughts/posts/rewriting-mlir/><span class=title>Next »</span><br><span>How Rewriting works in MLIR</span></a></nav></footer></article></main><div class=subscribe-section><p>Want to get notified when new posts go live?</p><a href="mailto:sntiledthoughts@gmail.com?subject=Subscribe%20to%20Tiled%20Thoughts&body=Hi%20Samarth,%0A%0AI'd%20like%20to%20subscribe%20to%20Tiled%20Thoughts.%0A%0AThanks!" class=subscribe-button>✉️ Email me to subscribe</a></div><style>.subscribe-section{text-align:center;margin-top:2rem;padding-top:1rem;border-top:1px solid #e5e5e5}.subscribe-button{display:inline-block;background-color:#333;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;transition:background .2s ease-in-out}.subscribe-button:hover{background-color:#555}</style></body></html>
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>Tiled Thoughts</title>
+<meta name="keywords" content="">
+<meta name="description" content="
+
+Home » Posts
+
+Data Structure and Iterator Kung Fu in LLVM
+
+Practical patterns, zero-copy views, and safe mutation loops for faster
+LLVM passes.
+
+
+November 9, 2025 · 8
+min · Samarth Narang
+
+
+
+Table of Contents">
+<meta name="author" content="">
+<link rel="canonical" href="https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/">
+<link crossorigin="anonymous" href="/tiled-thoughts/assets/css/stylesheet.343cc480b9ffc8f04ccbe5e968ad674880cab773ec19905e93033065c1e7a804.css" integrity="sha256-NDzEgLn/yPBMy&#43;XpaK1nSIDKt3PsGZBekwMwZcHnqAQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://samarthnarang.com/tiled-thoughts/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://samarthnarang.com/tiled-thoughts/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://samarthnarang.com/tiled-thoughts/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://samarthnarang.com/tiled-thoughts/apple-touch-icon.png">
+<link rel="mask-icon" href="https://samarthnarang.com/tiled-thoughts/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script><meta property="og:url" content="https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/">
+  <meta property="og:site_name" content="Tiled Thoughts">
+  <meta property="og:title" content="Tiled Thoughts">
+  <meta property="og:description" content=" Home » Posts
+Data Structure and Iterator Kung Fu in LLVM Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.
+November 9, 2025 · 8 min · Samarth Narang
+Table of Contents">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="">
+<meta name="twitter:description" content="
+
+Home » Posts
+
+Data Structure and Iterator Kung Fu in LLVM
+
+Practical patterns, zero-copy views, and safe mutation loops for faster
+LLVM passes.
+
+
+November 9, 2025 · 8
+min · Samarth Narang
+
+
+
+Table of Contents">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "Posts",
+      "item": "https://samarthnarang.com/tiled-thoughts/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "",
+      "item": "https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "",
+  "name": "",
+  "description": " Home » Posts\nData Structure and Iterator Kung Fu in LLVM Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.\nNovember 9, 2025 · 8 min · Samarth Narang\nTable of Contents\n",
+  "keywords": [
+    
+  ],
+  "articleBody": " Home » Posts\nData Structure and Iterator Kung Fu in LLVM Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.\nNovember 9, 2025 · 8 min · Samarth Narang\nTable of Contents\nWhy LLVM ships its own containers Core Value Types (which own nothing) StringRef ArrayRef / MutableArrayRef Twine Small-Size Optimized Containers SmallVector SmallString SmallPtrSet “Hashy” Workhorses DenseMap / DenseSet Custom Keys providing DenseMapInfo with: StringMap Erasing While Iterating Arenas, Uniquing, and more BumpPtrAllocator FoldingSet Error handling the LLVM way IR-Centric Must-Knows Traversal Idioms Mutation Safety CFG Helpers Range and Iterator (Halloween!) Candy Choosing the Right Data Structure (A Decision Matrix) Common “Shooting Yourself in the Foot” Pitfalls Micro-Benchmarks Compile and Run Conclusion When to use SmallVector vs std::vector, why DenseMap feels like cheating, how StringRef \u0026 ArrayRef avoid copies, and the iterator tricks that make LLVM code elegant and fast.\nWhy LLVM ships its own containers LLVM’s Abstract Data Types (ADT) exist to minimize allocations, avoid unnecessary copies, and keep hot paths fast. They are battle-tested for compiler workloads: small objects, pointer-heavy graphs, predictable iteration patterns, stable string handling, and more.\nCore Value Types (which own nothing) StringRef StringRef is a non-owning reference to a string, i.e., it does not own the underlying data. By storing just a pointer and a length (it’s basically a (char*, size_t) pair), it is zero-copy by design.\nAPIs : front(), startswith(), contains(), drop_front(), consume_front(\"0x\"), split(), and many more.\nLifetime rule : The referenced memory must outlive the StringRef.\nArrayRef / MutableArrayRef Similar to StringRef, ArrayRef is a lightweight, non-owning reference to a contiguous array of elements of type T. ArrayRef ensures efficient access but the data is not modifiable; for that, use MutableArrayRef. Gotcha : Don’t create an ArrayRef from a temporary container, as the data may be destroyed immediately after. Twine Twine is a lightweight way to concatenate strings without creating intermediate copies. It represents a concatenation of strings as a tree structure, allowing efficient construction of complex strings on-the-fly. Rule : Don’t store a Twine, materialize with SmallString or std::string if you need to keep the result. Small-Size Optimized Containers SmallVector What: std::vector semantics with inline storage for up to N elements. Choose N: do profiling; balance spill overhead vs. stack usage. In the event of exceeding N, it seamlessly falls back to heap allocation, i.e., it behaves like a regular std::vector beyond that point. APIs: push_back, emplace_back, reserve, append, pop_back_val, and more. SmallVector WorkList; // Inline storage for 4 pointers WorkList.push_back(NewValue); // No heap allocation until size \u003e 4 while (!WorkList.empty()) { Value *V = WorkList.pop_back_val(); // Pops the last element // Process V... } SmallString A SmallVector specialized for strings. Some useful string helpers: str(), append(), push_back(), etc. SmallPtrSet A set optimized for storing a small number of pointers. Linear for small sizes, hash table for larger sizes. Great for tracking visited nodes in graph algorithms. SmallPtrSet Visited; for (BasicBlock \u0026BB : Function) { if (Visited.insert(\u0026BB).second) { // First time visiting BB } } “Hashy” Workhorses DenseMap / DenseSet What: Open-addressing hash table with a compact memory layout. Open addressing is a collision resolution method where all elements are stored within the hash table itself, avoiding the need for pointers to separate nodes. This leads to better cache locality and reduced memory overhead. Shines with: pointer keys, small keys, and frequent lookups. APIs: try_emplace, insert, find, erase, etc. Perf Tips: Reserve capacity upfront via reserve(expectedSize); rebuild if tombstones explode (DenseMap::shrink_and_clear()). DenseMap rank; for (auto \u0026I : instructions(F)) { rank.try_emplace(\u0026I, rank.size()); // Assign unique rank if not present } Custom Keys providing DenseMapInfo with: getEmptyKey() : A special key value representing an empty slot.\ngetTombstoneKey() : A special key value representing a deleted slot\nTombstones are special markers used in open-addressing hash tables to mean “this slot was occupied by a key but has since been deleted”. They help maintain the integrity of probing sequences during lookups and insertions.\ngetHashValue(const Key \u0026K) : A hash function for the key type.\nisEqual(const Key \u0026LHS, const Key \u0026RHS) : Equality comparison\nstruct MyKey {int a; int b;}; template\u003c\u003e struct DenseMapInfo { static MyKey getEmptyKey() { return {INT_MIN, INT_MIN}; } // Use unlikely values static MyKey getTombstoneKey() { return {INT_MIN + 1, INT_MIN + 1}; } static unsigned getHashValue(const MyKey \u0026K) { return hash_combine(K.a, K.b); // Combine fields for hash } static bool isEqual(const MyKey \u0026LHS, const MyKey \u0026RHS) { return LHS.a == RHS.a \u0026\u0026 LHS.b == RHS.b; } }; StringMap A hash table mapping strings to values, optimized for string keys. Use when: when keys are owned and stable. StringMap NameToID; NameToID[\"foo\"]++; // Increment count for \"foo\" Erasing While Iterating When erasing elements from DenseMap or StringMap during iteration, use the following pattern to avoid invalidating the iterator:\nfor (auto It = Map.begin(); It != Map.end(); ) { if (it-\u003esecond == 0) it = Map.erase(It); // erase returns the next valid iterator else ++It; // only increment if not erasing } Arenas, Uniquing, and more BumpPtrAllocator Fast linear allocator for short-lived objects. Allocate many small objects quickly; free all at once. Pair with StringSaver to own strings cheaply. BumpPtrAllocator arena; StringSaver saver(arena); StringRef name = saver.save(\"temporary_name\"); // Owned by arena FoldingSet What: hash-cons an object based on its structural identity.\nHash-consing is a popular functional programming technique to canonicalize identical immutable structures so that these structures are represented by a single heap node. The usefulness stems from the fact that large data structures often contain many identical substructures; when we want to check for equality between two structures, we can simply compare their pointers instead of traversing the entire structure.\nPattern: derive from FoldingSetNode, implement the Profile method, and use FoldingSet to store unique instances.\nstruct Key : public FoldingSetNode { int a; StringRef b; void Profile(FoldingSetNodeID \u0026ID) const { ID.AddInteger(a); ID.AddString(b); } }; FoldingSet KeySet; void insertOrGet(int a, StringRef b, BumpPtrAllocator \u0026arena) { Key Temp{a, b}; void *InsertPos; if (Key *Existing = KeySet.FindNodeOrInsertPos(Temp, InsertPos)) { // hash-consed // Use Existing } else { Key *NewKey = new (arena.Allocate()) Key{a, saver.save(b)}; KeySet.InsertNode(NewKey, InsertPos); } } Error handling the LLVM way LLVM provides a rich set of utilities for error handling, including Error, Expected, and handleErrors. These abstractions allow for expressive and type-safe error propagation without relying on exceptions.\nReturn Expected on success or error. Consume: if (!E) return E.takeError(); - By default, llvm::Error objects are move-only; takeError() allows transferring ownership of the error to the caller for handling. Helpers: cantFail(E), handleErrors(E, ...), joinErrors(...). Expected",
+  "wordCount" : "1664",
+  "inLanguage": "en",
+  "datePublished": "0001-01-01T00:00:00Z",
+  "dateModified": "0001-01-01T00:00:00Z",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Tiled Thoughts",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://samarthnarang.com/tiled-thoughts/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://samarthnarang.com/tiled-thoughts/" accesskey="h" title="Tiled Thoughts (Alt + H)">Tiled Thoughts</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://samarthnarang.com/tiled-thoughts/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://samarthnarang.com/tiled-thoughts/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      
+    </h1>
+    <div class="post-meta"><span>8 min</span>
+
+</div>
+  </header> 
+  <div class="post-content"><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<p><a href="https://samarthnarang.com/tiled-thoughts/">Home</a> » <a href="https://samarthnarang.com/tiled-thoughts/posts/">Posts</a></p>
+<!-- raw HTML omitted -->
+<h1 id="data-structure-and-iterator-kung-fu-in-llvm">Data Structure and Iterator Kung Fu in LLVM<a hidden class="anchor" aria-hidden="true" href="#data-structure-and-iterator-kung-fu-in-llvm">#</a></h1>
+<!-- raw HTML omitted -->
+<p>Practical patterns, zero-copy views, and safe mutation loops for faster
+LLVM passes.</p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<p><!-- raw HTML omitted -->November 9, 2025<!-- raw HTML omitted --> · 8
+min · Samarth Narang</p>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<p><!-- raw HTML omitted -->Table of Contents<!-- raw HTML omitted --></p>
+<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->Why LLVM ships its own
+containers<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->Core Value Types
+(which own nothing)<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->StringRef<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->ArrayRef / MutableArrayRef<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->Twine<!-- raw HTML omitted --></li>
+</ul>
+</li>
+<li><!-- raw HTML omitted -->Small-Size Optimized
+Containers<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->SmallVector&lt;T, N&gt;<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->SmallString<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->SmallPtrSet&lt;T*, N&gt;<!-- raw HTML omitted --></li>
+</ul>
+</li>
+<li><!-- raw HTML omitted -->“Hashy”
+Workhorses<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->DenseMap&lt;KeyT,
+ValueT&gt; / DenseSet<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->Custom
+Keys providing DenseMapInfo&lt;Key&gt; with:<!-- raw HTML omitted --></li>
+</ul>
+</li>
+<li><!-- raw HTML omitted -->StringMap<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->Erasing While Iterating<!-- raw HTML omitted --></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><!-- raw HTML omitted -->Arenas, Uniquing, and more<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->BumpPtrAllocator<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->FoldingSet<!-- raw HTML omitted --></li>
+</ul>
+</li>
+<li><!-- raw HTML omitted -->Error handling the LLVM way<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->IR-Centric Must-Knows<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->Traversal
+Idioms<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->Mutation
+Safety<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->CFG Helpers<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->Range and Iterator
+(Halloween!) Candy<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->Choosing
+the Right Data Structure (A Decision Matrix)<!-- raw HTML omitted --></li>
+<li><!-- raw HTML omitted -->Common
+“Shooting Yourself in the Foot” Pitfalls<!-- raw HTML omitted --></li>
+</ul>
+</li>
+<li><!-- raw HTML omitted -->Micro-Benchmarks<!-- raw HTML omitted -->
+<ul>
+<li><!-- raw HTML omitted -->Compile and
+Run<!-- raw HTML omitted --></li>
+</ul>
+</li>
+<li><!-- raw HTML omitted -->Conclusion<!-- raw HTML omitted --></li>
+</ul>
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<blockquote>
+<p>When to use SmallVector vs std::vector, why DenseMap feels like
+cheating, how StringRef &amp; ArrayRef avoid copies, and the iterator
+tricks that make LLVM code elegant and fast.</p>
+</blockquote>
+<h2 id="why-llvm-ships-its-own-containers">Why LLVM ships its own containers<a hidden class="anchor" aria-hidden="true" href="#why-llvm-ships-its-own-containers">#</a></h2>
+<p>LLVM’s Abstract Data Types (ADT) exist to minimize allocations, avoid
+unnecessary copies, and keep hot paths fast. They are battle-tested for
+compiler workloads: small objects, pointer-heavy graphs, predictable
+iteration patterns, stable string handling, and more.</p>
+<h2 id="core-value-types-which-own-nothing">Core Value Types (which own nothing)<a hidden class="anchor" aria-hidden="true" href="#core-value-types-which-own-nothing">#</a></h2>
+<h3 id="stringref">StringRef<a hidden class="anchor" aria-hidden="true" href="#stringref">#</a></h3>
+<ul>
+<li>
+<p><code>StringRef</code> is a <code>non-owning</code> reference to a string, i.e., it does not
+own the underlying data. By storing just a pointer and a length (it’s
+basically a <code>(char*, size_t)</code> pair), it is <em>zero-copy</em> by design.</p>
+</li>
+<li>
+<p><strong>APIs</strong> : <code>front()</code>, <code>startswith()</code>, <code>contains()</code>, <code>drop_front()</code>,
+<code>consume_front(&quot;0x&quot;)</code>, <code>split()</code>, and many more.</p>
+</li>
+<li>
+<p><strong>Lifetime rule</strong> : The referenced memory must outlive the
+<code>StringRef</code>.</p>
+</li>
+</ul>
+<h3 id="arrayref--mutablearrayref">ArrayRef / MutableArrayRef<a hidden class="anchor" aria-hidden="true" href="#arrayref--mutablearrayref">#</a></h3>
+<ul>
+<li>Similar to <code>StringRef</code>, <code>ArrayRef&lt;T&gt;</code> is a lightweight, non-owning
+reference to a contiguous array of elements of type <code>T</code>. <code>ArrayRef</code>
+ensures efficient access but the data is not modifiable; for that, use
+<code>MutableArrayRef&lt;T&gt;</code>.</li>
+<li><strong>Gotcha</strong> : Don’t create an <code>ArrayRef</code> from a temporary container, as
+the data may be destroyed immediately after.</li>
+</ul>
+<h3 id="twine">Twine<a hidden class="anchor" aria-hidden="true" href="#twine">#</a></h3>
+<ul>
+<li><code>Twine</code> is a lightweight way to concatenate strings without creating
+intermediate copies. It represents a concatenation of strings as a
+tree structure, allowing efficient construction of complex strings
+on-the-fly.</li>
+<li><strong>Rule</strong> : Don’t store a <code>Twine</code>, materialize with <code>SmallString</code> or
+<code>std::string</code> if you need to keep the result.</li>
+</ul>
+<h2 id="small-size-optimized-containers">Small-Size Optimized Containers<a hidden class="anchor" aria-hidden="true" href="#small-size-optimized-containers">#</a></h2>
+<h3 id="smallvectort-n">SmallVector&lt;T, N&gt;<a hidden class="anchor" aria-hidden="true" href="#smallvectort-n">#</a></h3>
+<ul>
+<li><strong>What</strong>: <code>std::vector</code> semantics with inline storage for up to <code>N</code>
+elements.</li>
+<li>Choose <code>N</code>: do profiling; balance spill overhead vs. stack usage.</li>
+<li>In the event of exceeding <code>N</code>, it seamlessly falls back to heap
+allocation, i.e., it behaves like a regular <code>std::vector</code> beyond that
+point.</li>
+<li><strong>APIs</strong>: <code>push_back</code>, <code>emplace_back</code>, <code>reserve</code>, <code>append</code>,
+<code>pop_back_val</code>, and more.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>SmallVector&lt;Value*, 4&gt; WorkList; // Inline storage for 4 pointers
+WorkList.push_back(NewValue); // No heap allocation until size &gt; 4
+while (!WorkList.empty()) {
+    Value *V = WorkList.pop_back_val(); // Pops the last element
+    // Process V...
+}
+</code></pre><!-- raw HTML omitted -->
+<h3 id="smallstring">SmallString<a hidden class="anchor" aria-hidden="true" href="#smallstring">#</a></h3>
+<ul>
+<li>A <code>SmallVector&lt;char, N&gt;</code> specialized for strings.</li>
+<li>Some useful string helpers: <code>str()</code>, <code>append()</code>, <code>push_back()</code>, etc.</li>
+</ul>
+<h3 id="smallptrsett-n">SmallPtrSet&lt;T*, N&gt;<a hidden class="anchor" aria-hidden="true" href="#smallptrsett-n">#</a></h3>
+<ul>
+<li>A set optimized for storing a small number of pointers.
+<ul>
+<li>Linear for small sizes, hash table for larger sizes.</li>
+</ul>
+</li>
+<li><strong>Great for</strong> tracking visited nodes in graph algorithms.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>SmallPtrSet&lt;BasicBlock*, 8&gt; Visited;
+for (BasicBlock &amp;BB : Function) {
+    if (Visited.insert(&amp;BB).second) {
+        // First time visiting BB
+    }
+}
+</code></pre><!-- raw HTML omitted -->
+<h2 id="hashy-workhorses">“Hashy” Workhorses<a hidden class="anchor" aria-hidden="true" href="#hashy-workhorses">#</a></h2>
+<h3 id="densemapkeyt-valuet--denseset">DenseMap&lt;KeyT, ValueT&gt; / DenseSet<a hidden class="anchor" aria-hidden="true" href="#densemapkeyt-valuet--denseset">#</a></h3>
+<ul>
+<li><strong>What</strong>: Open-addressing hash table with a compact memory layout.
+<ul>
+<li>Open addressing is a collision resolution method where all elements
+are stored within the hash table itself, avoiding the need for
+pointers to separate nodes. This leads to better cache locality and
+reduced memory overhead.</li>
+</ul>
+</li>
+<li><strong>Shines with</strong>: pointer keys, small keys, and frequent lookups.</li>
+<li><strong>APIs</strong>: <code>try_emplace</code>, <code>insert</code>, <code>find</code>, <code>erase</code>, etc.</li>
+<li><strong>Perf Tips</strong>: Reserve capacity upfront via <code>reserve(expectedSize)</code>;
+rebuild if tombstones explode (<code>DenseMap::shrink_and_clear()</code>).</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>DenseMap&lt;Value*, unsigned&gt; rank;
+for (auto &amp;I : instructions(F)) {
+    rank.try_emplace(&amp;I, rank.size()); // Assign unique rank if not present
+}
+</code></pre><!-- raw HTML omitted -->
+<h4 id="custom-keys-providing-densemapinfokey-with">Custom Keys providing <code>DenseMapInfo&lt;Key&gt;</code> with:<a hidden class="anchor" aria-hidden="true" href="#custom-keys-providing-densemapinfokey-with">#</a></h4>
+<ul>
+<li>
+<p><code>getEmptyKey()</code> : A special key value representing an empty slot.</p>
+</li>
+<li>
+<p><code>getTombstoneKey()</code> : A special key value representing a deleted slot</p>
+<blockquote>
+<p>Tombstones are special markers used in open-addressing hash tables
+to mean “this slot was occupied by a key but has since been
+deleted”. They help maintain the integrity of probing sequences
+during lookups and insertions.</p>
+</blockquote>
+</li>
+<li>
+<p><code>getHashValue(const Key &amp;K)</code> : A hash function for the key type.</p>
+</li>
+<li>
+<p><code>isEqual(const Key &amp;LHS, const Key &amp;RHS)</code> : Equality comparison</p>
+</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>struct MyKey {int a; int b;};
+template&lt;&gt; struct DenseMapInfo&lt;MyKey&gt; {
+  static MyKey getEmptyKey() { return {INT_MIN, INT_MIN}; } // Use unlikely values
+  static MyKey getTombstoneKey() { return {INT_MIN + 1, INT_MIN + 1}; } 
+  static unsigned getHashValue(const MyKey &amp;K) {
+    return hash_combine(K.a, K.b); // Combine fields for hash
+  }
+  static bool isEqual(const MyKey &amp;LHS, const MyKey &amp;RHS) {
+    return LHS.a == RHS.a &amp;&amp; LHS.b == RHS.b;
+  }
+};
+</code></pre><!-- raw HTML omitted -->
+<h3 id="stringmap">StringMap<a hidden class="anchor" aria-hidden="true" href="#stringmap">#</a></h3>
+<ul>
+<li>A hash table mapping strings to values, optimized for string keys.</li>
+<li><strong>Use when</strong>: when keys are owned and stable.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>StringMap&lt;unsigned&gt; NameToID;
+NameToID[&#34;foo&#34;]++; // Increment count for &#34;foo&#34;
+</code></pre><!-- raw HTML omitted -->
+<h4 id="erasing-while-iterating">Erasing While Iterating<a hidden class="anchor" aria-hidden="true" href="#erasing-while-iterating">#</a></h4>
+<p>When erasing elements from <code>DenseMap</code> or <code>StringMap</code> during iteration,
+use the following pattern to avoid invalidating the iterator:</p>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>for (auto It = Map.begin(); It != Map.end(); ) {
+    if (it-&gt;second == 0) it = Map.erase(It); // erase returns the next valid iterator
+    else ++It; // only increment if not erasing
+}
+</code></pre><!-- raw HTML omitted -->
+<h2 id="arenas-uniquing-and-more">Arenas, Uniquing, and more<a hidden class="anchor" aria-hidden="true" href="#arenas-uniquing-and-more">#</a></h2>
+<h3 id="bumpptrallocator">BumpPtrAllocator<a hidden class="anchor" aria-hidden="true" href="#bumpptrallocator">#</a></h3>
+<ul>
+<li>Fast linear allocator for short-lived objects.</li>
+<li>Allocate many small objects quickly; free all at once.</li>
+<li>Pair with <code>StringSaver</code> to own strings cheaply.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>BumpPtrAllocator arena;
+StringSaver saver(arena);
+StringRef name = saver.save(&#34;temporary_name&#34;); // Owned by arena
+</code></pre><!-- raw HTML omitted -->
+<h3 id="foldingset">FoldingSet<a hidden class="anchor" aria-hidden="true" href="#foldingset">#</a></h3>
+<ul>
+<li>
+<p><strong>What</strong>: hash-cons an object based on its structural identity.</p>
+<blockquote>
+<p><em>Hash-consing</em> is a popular functional programming technique to
+canonicalize identical immutable structures so that these structures
+are represented by a single heap node. The usefulness stems from the
+fact that large data structures often contain many identical
+substructures; when we want to check for equality between two
+structures, we can simply compare their pointers instead of
+traversing the entire structure.</p>
+</blockquote>
+</li>
+<li>
+<p><strong>Pattern</strong>: derive from <code>FoldingSetNode</code>, implement the <code>Profile</code>
+method, and use <code>FoldingSet</code> to store unique instances.</p>
+</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>
+struct Key : public FoldingSetNode {
+    int a;
+    StringRef b;
+    void Profile(FoldingSetNodeID &amp;ID) const {
+        ID.AddInteger(a);
+        ID.AddString(b);
+    }
+};
+
+FoldingSet&lt;Key&gt; KeySet;
+void insertOrGet(int a, StringRef b, BumpPtrAllocator &amp;arena) {
+    Key Temp{a, b};
+    void *InsertPos;
+    if (Key *Existing = KeySet.FindNodeOrInsertPos(Temp, InsertPos)) { // hash-consed
+        // Use Existing
+    } else {
+        Key *NewKey = new (arena.Allocate&lt;Key&gt;()) Key{a, saver.save(b)};
+        KeySet.InsertNode(NewKey, InsertPos);
+    }
+}
+</code></pre><!-- raw HTML omitted -->
+<h2 id="error-handling-the-llvm-way">Error handling the LLVM way<a hidden class="anchor" aria-hidden="true" href="#error-handling-the-llvm-way">#</a></h2>
+<p>LLVM provides a rich set of utilities for error handling, including
+<code>Error</code>, <code>Expected&lt;T&gt;</code>, and <code>handleErrors</code>. These abstractions allow for
+expressive and type-safe error propagation without relying on
+exceptions.</p>
+<ul>
+<li><strong>Return</strong> <code>Expected&lt;T&gt;</code> on success or error.</li>
+<li><strong>Consume</strong>: <code>if (!E) return E.takeError();</code> - By default,
+<code>llvm::Error</code> objects are move-only; <code>takeError()</code> allows transferring
+ownership of the error to the caller for handling.</li>
+<li><strong>Helpers</strong>: <code>cantFail(E)</code>, <code>handleErrors(E, ...)</code>, <code>joinErrors(...)</code>.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>Expected&lt;std::unique_ptr&lt;Module&gt;&gt; loadModule(StringRef Path, LLVMContext &amp;Ctx) {
+    SMDiagnostic Err;
+    std::unique_ptr&lt;Module&gt; M = parseIRFile(Path, Err, Ctx);
+    if (!M) return createStringError(inconvertibleErrorCode(), &#34;Failed to parse IR file&#34;);
+    return std::move(M);
+}
+</code></pre><!-- raw HTML omitted -->
+<h2 id="ir-centric-must-knows">IR-Centric Must-Knows<a hidden class="anchor" aria-hidden="true" href="#ir-centric-must-knows">#</a></h2>
+<h3 id="traversal-idioms">Traversal Idioms<a hidden class="anchor" aria-hidden="true" href="#traversal-idioms">#</a></h3>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>for (Function &amp;F : M) { // Look at all functions in Module M.
+    for (BasicBlock &amp;BB : F) { // Look at all basic blocks in Function F.
+        for (Instruction &amp;I : BB) { // Look at all instructions in BasicBlock BB.
+            // Process instruction I
+        }
+    }
+}
+
+for (Use &amp;U : V-&gt;uses()) { // Look at all uses of Value v.
+    if (auto *I = dyn_cast&lt;Instruction&gt;(U.getUser())) {
+        // Process instruction I that uses V
+    }
+}
+
+for (Value *op : I.operands()) { // Look at all operands of Instruction I.
+    // Process operand op
+}
+for(Use &amp;U : I.operands()) { // Mutable access to operands
+    // Mutate operand U
+}
+</code></pre><!-- raw HTML omitted -->
+<h3 id="mutation-safety">Mutation Safety<a hidden class="anchor" aria-hidden="true" href="#mutation-safety">#</a></h3>
+<ul>
+<li><strong>Early-inc</strong>: Use <code>make_early_inc_range</code> when mutating a container
+while iterating over it.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>for (Instruction &amp;I : make_early_inc_range(BB)) { // Safe to mutate BB while iterating
+    I.eraseFromParent(); // Safe to erase while iterating
+}
+</code></pre><!-- raw HTML omitted -->
+<h3 id="cfg-helpers">CFG Helpers<a hidden class="anchor" aria-hidden="true" href="#cfg-helpers">#</a></h3>
+<ul>
+<li><code>predecessors(BB)</code>, <code>successors(BB)</code>: Iterate over
+predecessor/successor basic blocks.</li>
+<li><code>LoopBlocksTraversal</code> : DFS traversal of loop blocks;
+<code>ReversePostOrderTraversal</code> : RPO traversal of CFG.</li>
+</ul>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>for (BasicBlock *Pred : predecessors(&amp;BB)) {
+    // Process predecessor Pred
+}
+
+for (BasicBlock *BB : ReversePostOrderTraversal(&amp;F)) {
+    // Process BB in RPO
+}
+</code></pre><!-- raw HTML omitted -->
+<h3 id="range-and-iterator-halloween-candy">Range and Iterator (Halloween!) Candy<a hidden class="anchor" aria-hidden="true" href="#range-and-iterator-halloween-candy">#</a></h3>
+<ul>
+<li><code>enumerate(range)</code>: <code>[index, element]</code> pairs.</li>
+<li><code>filter(range, predicate)</code>: Filter elements by predicate.</li>
+<li><code>map_range(range, func)</code>: Transform elements by func.</li>
+<li><code>zip(range1, range2, ...)</code> : Tuple-wise iteration</li>
+<li><code>reverse(range)</code>: Reverse iteration.</li>
+</ul>
+<h3 id="choosing-the-right-data-structure-a-decision-matrix">Choosing the Right Data Structure (A Decision Matrix)<a hidden class="anchor" aria-hidden="true" href="#choosing-the-right-data-structure-a-decision-matrix">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Need</th>
+          <th>Pick</th>
+          <th>Why</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>≤ N typical, latency-sensitive</td>
+          <td><code>SmallVector&lt;T,N&gt;</code></td>
+          <td>avoids heap</td>
+      </tr>
+      <tr>
+          <td>Pointer membership/visited</td>
+          <td><code>SmallPtrSet&lt;T*,N&gt;</code></td>
+          <td>inline + hash</td>
+      </tr>
+      <tr>
+          <td>Many lookups, pointer/int keys</td>
+          <td><code>DenseMap/Set</code></td>
+          <td>cache-friendly</td>
+      </tr>
+      <tr>
+          <td>String keys, own them</td>
+          <td><code>StringMap&lt;T&gt;</code></td>
+          <td>single alloc</td>
+      </tr>
+      <tr>
+          <td>Non-owning string/array view</td>
+          <td><code>StringRef</code> / <code>ArrayRef</code></td>
+          <td>zero copy</td>
+      </tr>
+      <tr>
+          <td>Thousands of short-lived nodes</td>
+          <td><code>BumpPtrAllocator</code></td>
+          <td>linear alloc</td>
+      </tr>
+      <tr>
+          <td>Structural dedup</td>
+          <td><code>FoldingSet&lt;T&gt;</code></td>
+          <td>profile-based hashcons</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="common-shooting-yourself-in-the-foot-pitfalls">Common “Shooting Yourself in the Foot” Pitfalls<a hidden class="anchor" aria-hidden="true" href="#common-shooting-yourself-in-the-foot-pitfalls">#</a></h3>
+<ul>
+<li><strong>Dangling</strong> <code>StringRef</code>: don’t reference temporaries. Instead, use
+<code>StringSaver</code>.</li>
+<li><strong>Erasing while iterating</strong> : <code>early_inc_range</code></li>
+<li><code>SmallVector</code> <strong>spill</strong> : choose <code>N</code> wisely.</li>
+<li><code>DenseMap</code> <strong>tombstone bloat</strong> : Use <code>reserve()</code>, and periodically
+<code>rebuild()</code>.</li>
+</ul>
+<h2 id="micro-benchmarks">Micro-Benchmarks<a hidden class="anchor" aria-hidden="true" href="#micro-benchmarks">#</a></h2>
+<p>Let’s look at a simple harness comparing <code>DenseMap</code> vs
+<code>std::unordered_map</code> for pointer keys.</p>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>#include &#34;llvm/ADT/DenseMap.h&#34;
+#include &lt;unordered_map&gt;
+#include &lt;chrono&gt;
+#include &lt;random&gt;
+
+using namespace llvm;
+
+int main() {
+  constexpr size_t N = 100000;
+  std::vector&lt;void*&gt; keys(N);
+  for (size_t i=0;i&lt;N;++i) keys[i] = reinterpret_cast&lt;void*&gt;((i+1)*16);
+
+  DenseMap&lt;void*, int&gt; dm; dm.reserve(N);
+  auto t0 = std::chrono::high_resolution_clock::now();
+  for (size_t i=0;i&lt;N;++i) dm.try_emplace(keys[i], (int)i);
+  auto t1 = std::chrono::high_resolution_clock::now();
+
+  std::unordered_map&lt;void*, int&gt; um; um.reserve(N);
+  for (size_t i=0;i&lt;N;++i) um.emplace(keys[i], (int)i);
+  auto t2 = std::chrono::high_resolution_clock::now();
+
+  auto ns1 = std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(t1-t0).count();
+  auto ns2 = std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(t2-t1).count();
+
+  printf(&#34;DenseMap insert: %lld ns, unordered_map insert: %lld ns\n&#34;,
+         (long long)ns1, (long long)ns2);
+}
+</code></pre><!-- raw HTML omitted -->
+<p>When run, you should see <code>DenseMap</code> outperforming <code>std::unordered_map</code>
+significantly for pointer keys due to its cache-friendly design and
+lower overhead.</p>
+<h3 id="compile-and-run">Compile and Run<a hidden class="anchor" aria-hidden="true" href="#compile-and-run">#</a></h3>
+<!-- raw HTML omitted -->
+<pre tabindex="0"><code>clang++ bench.cpp -O3 -I/path/to/llvm/include -o bench
+./bench
+
+DenseMap insert: 298833 ns, unordered_map insert: 50096584 ns
+</code></pre><!-- raw HTML omitted -->
+<p>From this simple benchmark, we observe that <code>DenseMap</code> is orders of
+magnitude faster than <code>std::unordered_map</code> for pointer keys,
+highlighting its efficiency for compiler workloads. Do more extensive
+benchmarking using <code>perf</code>!</p>
+<h2 id="conclusion">Conclusion<a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h2>
+<p>LLVM’s ADT library provides a rich set of data structures and iterator
+patterns optimized for compiler workloads. By leveraging these tools
+effectively, you can write passes that are both efficient and
+maintainable. Understanding when and how to use these structures is key
+to mastering LLVM development. Happy coding!</p>
+<!-- raw HTML omitted -->
+<ul>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/llvm/">LLVM</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/data-structures/">Data
+Structures</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/iterators/">Iterators</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/compilers/">Compilers</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/performance/">Performance</a></li>
+<li><a href="https://samarthnarang.com/tiled-thoughts/tags/c++/">C++</a></li>
+</ul>
+<p><!-- raw HTML omitted --><!-- raw HTML omitted -->« Prev<!-- raw HTML omitted --><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->How GPUs Talk: A Practical Guide to Multi-GPU Training and
+Communication<!-- raw HTML omitted --><!-- raw HTML omitted -->
+<!-- raw HTML omitted --><!-- raw HTML omitted -->Next »<!-- raw HTML omitted --><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->How Rewriting works in MLIR<!-- raw HTML omitted --><!-- raw HTML omitted --></p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://samarthnarang.com/tiled-thoughts/posts/demystifying-gpu-terminology/">
+    <span class="title">« Prev</span>
+    <br>
+    <span></span>
+  </a>
+  <a class="next" href="https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/">
+    <span class="title">Next »</span>
+    <br>
+    <span></span>
+  </a>
+</nav>
+
+
+<ul class="share-buttons">
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on x"
+            href="https://x.com/intent/tweet/?text=&amp;url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f&amp;hashtags=">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M512 62.554 L 512 449.446 C 512 483.97 483.97 512 449.446 512 L 62.554 512 C 28.03 512 0 483.97 0 449.446 L 0 62.554 C 0 28.03 28.029 0 62.554 0 L 449.446 0 C 483.971 0 512 28.03 512 62.554 Z M 269.951 190.75 L 182.567 75.216 L 56 75.216 L 207.216 272.95 L 63.9 436.783 L 125.266 436.783 L 235.9 310.383 L 332.567 436.783 L 456 436.783 L 298.367 228.367 L 432.367 75.216 L 371.033 75.216 Z M 127.633 110 L 164.101 110 L 383.481 400.065 L 349.5 400.065 Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on linkedin"
+            href="https://www.linkedin.com/shareArticle?mini=true&amp;url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f&amp;title=&amp;summary=&amp;source=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-288.985,423.278l0,-225.717l-75.04,0l0,225.717l75.04,0Zm270.539,0l0,-129.439c0,-69.333 -37.018,-101.586 -86.381,-101.586c-39.804,0 -57.634,21.891 -67.617,37.266l0,-31.958l-75.021,0c0.995,21.181 0,225.717 0,225.717l75.02,0l0,-126.056c0,-6.748 0.486,-13.492 2.474,-18.315c5.414,-13.475 17.767,-27.434 38.494,-27.434c27.135,0 38.007,20.707 38.007,51.037l0,120.768l75.024,0Zm-307.552,-334.556c-25.674,0 -42.448,16.879 -42.448,39.002c0,21.658 16.264,39.002 41.455,39.002l0.484,0c26.165,0 42.452,-17.344 42.452,-39.002c-0.485,-22.092 -16.241,-38.954 -41.943,-39.002Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on reddit"
+            href="https://reddit.com/submit?url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f&title=">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-3.446,265.638c0,-22.964 -18.616,-41.58 -41.58,-41.58c-11.211,0 -21.361,4.457 -28.841,11.666c-28.424,-20.508 -67.586,-33.757 -111.204,-35.278l18.941,-89.121l61.884,13.157c0.756,15.734 13.642,28.29 29.56,28.29c16.407,0 29.706,-13.299 29.706,-29.701c0,-16.403 -13.299,-29.702 -29.706,-29.702c-11.666,0 -21.657,6.792 -26.515,16.578l-69.105,-14.69c-1.922,-0.418 -3.939,-0.042 -5.585,1.036c-1.658,1.073 -2.811,2.761 -3.224,4.686l-21.152,99.438c-44.258,1.228 -84.046,14.494 -112.837,35.232c-7.468,-7.164 -17.589,-11.591 -28.757,-11.591c-22.965,0 -41.585,18.616 -41.585,41.58c0,16.896 10.095,31.41 24.568,37.918c-0.639,4.135 -0.99,8.328 -0.99,12.576c0,63.977 74.469,115.836 166.33,115.836c91.861,0 166.334,-51.859 166.334,-115.836c0,-4.218 -0.347,-8.387 -0.977,-12.493c14.564,-6.47 24.735,-21.034 24.735,-38.001Zm-119.474,108.193c-20.27,20.241 -59.115,21.816 -70.534,21.816c-11.428,0 -50.277,-1.575 -70.522,-21.82c-3.007,-3.008 -3.007,-7.882 0,-10.889c3.003,-2.999 7.882,-3.003 10.885,0c12.777,12.781 40.11,17.317 59.637,17.317c19.522,0 46.86,-4.536 59.657,-17.321c3.016,-2.999 7.886,-2.995 10.885,0.008c3.008,3.011 3.003,7.882 -0.008,10.889Zm-5.23,-48.781c-16.373,0 -29.701,-13.324 -29.701,-29.698c0,-16.381 13.328,-29.714 29.701,-29.714c16.378,0 29.706,13.333 29.706,29.714c0,16.374 -13.328,29.698 -29.706,29.698Zm-160.386,-29.702c0,-16.381 13.328,-29.71 29.714,-29.71c16.369,0 29.689,13.329 29.689,29.71c0,16.373 -13.32,29.693 -29.689,29.693c-16.386,0 -29.714,-13.32 -29.714,-29.693Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on facebook"
+            href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-106.468,0l0,-192.915l66.6,0l12.672,-82.621l-79.272,0l0,-53.617c0,-22.603 11.073,-44.636 46.58,-44.636l36.042,0l0,-70.34c0,0 -32.71,-5.582 -63.982,-5.582c-65.288,0 -107.96,39.569 -107.96,111.204l0,62.971l-72.573,0l0,82.621l72.573,0l0,192.915l-191.104,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on whatsapp"
+            href="https://api.whatsapp.com/send?text=%20-%20https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f">
+            <svg version="1.1" viewBox="0 0 512 512" xml:space="preserve" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M449.446,0c34.525,0 62.554,28.03 62.554,62.554l0,386.892c0,34.524 -28.03,62.554 -62.554,62.554l-386.892,0c-34.524,0 -62.554,-28.03 -62.554,-62.554l0,-386.892c0,-34.524 28.029,-62.554 62.554,-62.554l386.892,0Zm-58.673,127.703c-33.842,-33.881 -78.847,-52.548 -126.798,-52.568c-98.799,0 -179.21,80.405 -179.249,179.234c-0.013,31.593 8.241,62.428 23.927,89.612l-25.429,92.884l95.021,-24.925c26.181,14.28 55.659,21.807 85.658,21.816l0.074,0c98.789,0 179.206,-80.413 179.247,-179.243c0.018,-47.895 -18.61,-92.93 -52.451,-126.81Zm-126.797,275.782l-0.06,0c-26.734,-0.01 -52.954,-7.193 -75.828,-20.767l-5.441,-3.229l-56.386,14.792l15.05,-54.977l-3.542,-5.637c-14.913,-23.72 -22.791,-51.136 -22.779,-79.287c0.033,-82.142 66.867,-148.971 149.046,-148.971c39.793,0.014 77.199,15.531 105.329,43.692c28.128,28.16 43.609,65.592 43.594,105.4c-0.034,82.149 -66.866,148.983 -148.983,148.984Zm81.721,-111.581c-4.479,-2.242 -26.499,-13.075 -30.604,-14.571c-4.105,-1.495 -7.091,-2.241 -10.077,2.241c-2.986,4.483 -11.569,14.572 -14.182,17.562c-2.612,2.988 -5.225,3.364 -9.703,1.12c-4.479,-2.241 -18.91,-6.97 -36.017,-22.23c-13.314,-11.876 -22.304,-26.542 -24.916,-31.026c-2.612,-4.484 -0.279,-6.908 1.963,-9.14c2.016,-2.007 4.48,-5.232 6.719,-7.847c2.24,-2.615 2.986,-4.484 4.479,-7.472c1.493,-2.99 0.747,-5.604 -0.374,-7.846c-1.119,-2.241 -10.077,-24.288 -13.809,-33.256c-3.635,-8.733 -7.327,-7.55 -10.077,-7.688c-2.609,-0.13 -5.598,-0.158 -8.583,-0.158c-2.986,0 -7.839,1.121 -11.944,5.604c-4.105,4.484 -15.675,15.32 -15.675,37.364c0,22.046 16.048,43.342 18.287,46.332c2.24,2.99 31.582,48.227 76.511,67.627c10.685,4.615 19.028,7.371 25.533,9.434c10.728,3.41 20.492,2.929 28.209,1.775c8.605,-1.285 26.499,-10.833 30.231,-21.295c3.732,-10.464 3.732,-19.431 2.612,-21.298c-1.119,-1.869 -4.105,-2.99 -8.583,-5.232Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on telegram"
+            href="https://telegram.me/share/url?text=&amp;url=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f">
+            <svg version="1.1" xml:space="preserve" viewBox="2 2 28 28" height="30px" width="30px" fill="currentColor">
+                <path
+                    d="M26.49,29.86H5.5a3.37,3.37,0,0,1-2.47-1,3.35,3.35,0,0,1-1-2.47V5.48A3.36,3.36,0,0,1,3,3,3.37,3.37,0,0,1,5.5,2h21A3.38,3.38,0,0,1,29,3a3.36,3.36,0,0,1,1,2.46V26.37a3.35,3.35,0,0,1-1,2.47A3.38,3.38,0,0,1,26.49,29.86Zm-5.38-6.71a.79.79,0,0,0,.85-.66L24.73,9.24a.55.55,0,0,0-.18-.46.62.62,0,0,0-.41-.17q-.08,0-16.53,6.11a.59.59,0,0,0-.41.59.57.57,0,0,0,.43.52l4,1.24,1.61,4.83a.62.62,0,0,0,.63.43.56.56,0,0,0,.4-.17L16.54,20l4.09,3A.9.9,0,0,0,21.11,23.15ZM13.8,20.71l-1.21-4q8.72-5.55,8.78-5.55c.15,0,.23,0,.23.16a.18.18,0,0,1,0,.06s-2.51,2.3-7.52,6.8Z" />
+            </svg>
+        </a>
+    </li>
+    <li>
+        <a target="_blank" rel="noopener noreferrer" aria-label="share  on ycombinator"
+            href="https://news.ycombinator.com/submitlink?t=&u=https%3a%2f%2fsamarthnarang.com%2ftiled-thoughts%2fposts%2fllvm-ds-iter%2f">
+            <svg version="1.1" xml:space="preserve" width="30px" height="30px" viewBox="0 0 512 512" fill="currentColor"
+                xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape">
+                <path
+                    d="M449.446 0C483.971 0 512 28.03 512 62.554L512 449.446C512 483.97 483.97 512 449.446 512L62.554 512C28.03 512 0 483.97 0 449.446L0 62.554C0 28.03 28.029 0 62.554 0L449.446 0ZM183.8767 87.9921H121.8427L230.6673 292.4508V424.0079H281.3328V292.4508L390.1575 87.9921H328.1233L256 238.2489z" />
+            </svg>
+        </a>
+    </li>
+</ul>
+
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="https://samarthnarang.com/tiled-thoughts/">Tiled Thoughts</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = 'copy';
+
+        function copyingDone() {
+            copybutton.innerHTML = 'copied!';
+            setTimeout(() => {
+                copybutton.innerHTML = 'copy';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

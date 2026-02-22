@@ -1,1 +1,33 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"><url><loc>https://samarthnarang.com/tiled-thoughts/tags/apple-silicon/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/arm64/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/vec-playground/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/compilers/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/llvm/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/neon/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/vectorization/</loc><lastmod>2025-11-22T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/ml/</loc><lastmod>2025-11-18T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/mlir/</loc><lastmod>2025-11-18T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/quantization/</loc><lastmod>2025-11-18T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/</loc><lastmod>2025-11-18T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/distributed-training/</loc><lastmod>2025-11-15T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/gpu/</loc><lastmod>2025-11-15T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/multi-gpu-comm/</loc><lastmod>2025-11-15T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/systems/</loc><lastmod>2025-11-15T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/c++/</loc><lastmod>2025-11-09T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/</loc><lastmod>2025-11-09T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/data-structures/</loc><lastmod>2025-11-09T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/iterators/</loc><lastmod>2025-11-09T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/performance/</loc><lastmod>2025-11-09T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/rewriting-mlir/</loc><lastmod>2025-11-08T00:00:01+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/optimization/</loc><lastmod>2025-11-08T00:00:01+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/rewriting/</loc><lastmod>2025-11-08T00:00:01+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/cuda/</loc><lastmod>2025-11-06T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/demystifying-gpu-terminology/</loc><lastmod>2025-11-06T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/rocm/</loc><lastmod>2025-11-06T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/triton/</loc><lastmod>2025-11-06T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/</loc><lastmod>2025-11-05T00:00:01+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/tiling/</loc><lastmod>2025-11-05T00:00:01+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</loc><lastmod>2025-11-05T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/tags/reflection/</loc><lastmod>2025-11-05T00:00:00+00:00</lastmod></url><url><loc>https://samarthnarang.com/tiled-thoughts/categories/</loc></url></urlset>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/demystifying-gpu-terminology/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/multi-gpu-comm/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/numerical-stability/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/rewriting-mlir/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/vec-playground/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/categories/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/posts/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/tags/</loc>
+  </url><url>
+    <loc>https://samarthnarang.com/tiled-thoughts/</loc>
+  </url>
+</urlset>

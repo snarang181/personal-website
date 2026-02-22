@@ -1,22 +1,228 @@
-<!doctype html><html lang=en dir=auto data-theme=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>Compilers | Tiled Thoughts: A Verbose Debug Build</title><meta name=keywords content><meta name=description content="Compiler passes, ML systems, and life — debug logs from the path between code and silicon."><meta name=author content="Samarth Narang"><link rel=canonical href=https://samarthnarang.com/tiled-thoughts/tags/compilers/><link crossorigin=anonymous href=/tiled-thoughts/assets/css/stylesheet.343cc480b9ffc8f04ccbe5e968ad674880cab773ec19905e93033065c1e7a804.css integrity="sha256-NDzEgLn/yPBMy+XpaK1nSIDKt3PsGZBekwMwZcHnqAQ=" rel="preload stylesheet" as=style><link rel=icon href=https://samarthnarang.com/tiled-thoughts/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://samarthnarang.com/tiled-thoughts/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://samarthnarang.com/tiled-thoughts/favicon-32x32.png><link rel=apple-touch-icon href=https://samarthnarang.com/tiled-thoughts/apple-touch-icon.png><link rel=mask-icon href=https://samarthnarang.com/tiled-thoughts/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate type=application/rss+xml href=https://samarthnarang.com/tiled-thoughts/tags/compilers/index.xml title=rss><link rel=alternate hreflang=en href=https://samarthnarang.com/tiled-thoughts/tags/compilers/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51);color-scheme:dark}.list{background:var(--theme)}.toc{background:var(--entry)}}@media(prefers-color-scheme:light){.list::-webkit-scrollbar-thumb{border-color:var(--code-bg)}}</style></noscript><script>localStorage.getItem("pref-theme")==="dark"?document.querySelector("html").dataset.theme="dark":localStorage.getItem("pref-theme")==="light"?document.querySelector("html").dataset.theme="light":window.matchMedia("(prefers-color-scheme: dark)").matches?document.querySelector("html").dataset.theme="dark":document.querySelector("html").dataset.theme="light"</script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css integrity=sha384-mll67QQG7kL7A1sFL1s0IcbK9GOGvegj6grkQHIjwBQ05vjY9U9Wc6sxIHrN6iGk crossorigin=anonymous><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js integrity=sha384-vpJtNq88iNGEZ14B2xFQv+HzS4xUeXUaW8js8NJNCFyKfDkbK7ZSP3qA7O3t0r8y crossorigin=anonymous></script><script defer src=https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js integrity=sha384-9pNnCSpDapGwYb9ZGWw4jyG1sRJb8i7Y36ce3g8e9KqjVL0woG5dnU2A0n0F3V4O crossorigin=anonymous onload='renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:!0},{left:"$",right:"$",display:!1}]})'></script><meta property="og:url" content="https://samarthnarang.com/tiled-thoughts/tags/compilers/"><meta property="og:site_name" content="Tiled Thoughts: A Verbose Debug Build"><meta property="og:title" content="Compilers"><meta property="og:description" content="Compiler passes, ML systems, and life — debug logs from the path between code and silicon."><meta property="og:locale" content="en-us"><meta property="og:type" content="website"><meta name=twitter:card content="summary"><meta name=twitter:title content="Compilers"><meta name=twitter:description content="Compiler passes, ML systems, and life — debug logs from the path between code and silicon."></head><body class=list id=top><header class=header><nav class=nav><div class=logo><a href=https://samarthnarang.com/tiled-thoughts/ accesskey=h title="Tiled Thoughts: A Verbose Debug Build (Alt + H)">Tiled Thoughts: A Verbose Debug Build</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme">
-<svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-<svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu><li><a href=https://samarthnarang.com title=Home><span>Home</span>&nbsp;
-<svg fill="none" shape-rendering="geometricPrecision" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" height="12" width="12"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a></li></ul></nav></header><main class=main><header class=page-header><div class=breadcrumbs><a href=https://samarthnarang.com/tiled-thoughts/>Home</a>&nbsp;»&nbsp;<a href=https://samarthnarang.com/tiled-thoughts/tags/>Tags</a></div><h1>Compilers</h1></header><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case Study</h2></header><div class=entry-content><p>On modern CPUs, the “slow” part of your code often isn’t the math, it’s how you feed the math units. Compilers try to fix this with clever optimizations, such as auto-vectorization: transforming scalar loops and turn them into SIMD (Single Instruction, Multiple Data) operations that process multiple data points in parallel.
-I wanted to know:
-If I hand-write NEON intrinsics on Apple Silicon, tune the loop unrolling, and stare at the assembly, can I beat Clang’s auto-vectorizer?
-Short-answer: not easily.
-This post walks through:
-A tiny vectorization playground for the SAXPY (Single-Precision A·X Plus Y) kernel on Apple Silicon. Benchmark results for scalar vs auto-vectorized vs manual NEON implementations. How changing loop unrolling in the manual NEON version affects performance. A look at the AAArch64 assembly generated by Clang for the auto-vectorized version. What this says about hand-written vector code vs compiler auto-vectorization. ...</p></div><footer class=entry-footer><span title='2025-11-22 00:00:00 +0000 UTC'>November 22, 2025</span>&nbsp;·&nbsp;<span>6 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case Study" href=https://samarthnarang.com/tiled-thoughts/posts/vec-playground/></a></article><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>Quantization in MLIR: Types, Scales, and Where to Put the q</h2></header><div class=entry-content><p>Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?
-In most stacks, quantization lives in an (awkward?) place:
-High-level frameworks (like PyTorch) expose “quantized layers” or post-training quantization APIs. Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts. The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions. MLIR is actually a sweet spot to make quantization less cursed:
-...</p></div><footer class=entry-footer><span title='2025-11-18 00:00:00 +0000 UTC'>November 18, 2025</span>&nbsp;·&nbsp;<span>7 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to Quantization in MLIR: Types, Scales, and Where to Put the q" href=https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/></a></article><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>How GPUs Talk: A Practical Guide to Multi-GPU Training and Communication</h2></header><div class=entry-content><p>Data parallel, FSDP, tensor parallel, pipeline parallel, and the collectives that hold them together.</p></div><footer class=entry-footer><span title='2025-11-15 00:00:00 +0000 UTC'>November 15, 2025</span>&nbsp;·&nbsp;<span>7 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to How GPUs Talk: A Practical Guide to Multi-GPU Training and Communication" href=https://samarthnarang.com/tiled-thoughts/posts/multi-gpu-comm/></a></article><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>Data Structure and Iterator Kung Fu in LLVM</h2></header><div class=entry-content><p>Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.</p></div><footer class=entry-footer><span title='2025-11-09 00:00:00 +0000 UTC'>November 9, 2025</span>&nbsp;·&nbsp;<span>8 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to Data Structure and Iterator Kung Fu in LLVM" href=https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/></a></article><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>How Rewriting works in MLIR</h2></header><div class=entry-content><p>If you only remember one thing from this post: rewriting in MLIR is “find a pattern, make a change, repeat until more changes can’t be made”, with two key components:
-Greedy pattern application (canonicalization and local clenups), and Dialect conversion (legalize/convert regions with invariants about the legal forms of ops). TL;DR Patterns live in a RewritePatternSet and are driven by either applyPatternsGreedily (for local greedy rewrites) or applyPartial/FullConversion (for dialect conversion with legality constraints). Write patterns by subclassing OpRewritePattern&lt;YourOp> and overriding matchAndRewrite with your logic. Rewrite safely using PatternRewriter methods to create, replace, and erase ops. Canonicalization : MLIR has a single canonicalization pass which applies all registered patterns greedily until no more matches are found. Conversion: MLIR’s conversion framework allows you to define legality constraints and convert ops from one dialect to another while preserving invariants. We do this with ConversionTarget and TypeConverter. Folding: Take series of ops complements rewriting by simplifying constant expressions during pattern application. Part 1: The moving pieces RewritePatternSet and PatternRewriter RewritePatternSet is a container for your rewrite patterns. You populate it with instances of your custom patterns. MLIR runs these patterns for you; you don’t directly loop over operations. In your pattern’s matchAndRewrite, you Inspect the matched op. Optionally create the new IR (using the rewriter’s insertion point). Replace or erase the matched op. Greedy vs. Conversion Greedy (Canonicalization and Local Rewrites) Think “peephole + algebraic simplification”. Use applyPatternsGreedily to apply all patterns in a RewritePatternSet. applyPatternsGreedily(fop, std::move(patterns)); Conversion (Dialect Conversion) Define legality constraints for ops via ConversionTarget. Use TypeConverter to handle type conversions. Use applyPartialConversion or applyFullConversion to convert ops while respecting legality. Part 2: Your first greedy rewrite pattern. Let’s fold away arith.addi %x, 0: i32 into just %x. Yeah, it’s trivial, and MLIR’s canonicalization already does this, but it’s a great starting point.
-...</p></div><footer class=entry-footer><span title='2025-11-08 00:00:01 +0000 UTC'>November 8, 2025</span>&nbsp;·&nbsp;<span>5 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to How Rewriting works in MLIR" href=https://samarthnarang.com/tiled-thoughts/posts/rewriting-mlir/></a></article><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>Demystifying GPU Terminology: A Compiler Engineer's Field Guide</h2></header><div class=entry-content><p>GPUs aren’t mysterious - just picky. Most performance cliffs are not about the math; they’re about how warps step, how memory is fetched, and how often the registers spill. This post decodes the jargon; and to be candid, it is me “spilling” my notes, trying to explain myself.
-TL;DR Think in warps, not threads. Coalesce or pay. Tile for reuse in shared memory, but watch the register pressure. Matrix units (Tensor Cores, FMAs, etc) love the right data types and tile sizes. Occupancy is a balancing act: a tool, not a goal. Just enough to hide latency. 1. Execution Model, Decoded SIMT vs SIMD (why is it confusing?) SIMD (CPU): Single Instruction, Multiple Data. One instruction operates on a fixed-width vector (e.g., a single AVX-512 instruction processes 16 floats at once). SIMT (GPU): Single Instruction, Multiple Threads. Many threads execute the same instruction in lockstep as a warp (NVIDIA) or wavefront (AMD); each thread has its own registers/control flow. Warps/Wavefronts Smallest lockstep unit:
-...</p></div><footer class=entry-footer><span title='2025-11-06 00:00:00 +0000 UTC'>November 6, 2025</span>&nbsp;·&nbsp;<span>4 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to Demystifying GPU Terminology: A Compiler Engineer's Field Guide" href=https://samarthnarang.com/tiled-thoughts/posts/demystifying-gpu-terminology/></a></article><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>Tile, Fuse, Repeat: Why Layout Matters for AI Performance</h2></header><div class=entry-content><p>Every time a neural network runs, there’s a silent negotiation between compute and memory.
-It’s naive to think ML compilers optimize just the compute - the FLOPs. In reality, they optimize movement. The most expensive operation in modern compute isn’t your matrix multiply; it’s getting data from memory to the compute units. This post explores how layout, tiling, and fusion are the unsung heroes of ML compiler performance.
-1. The Compiler’s Hidden Battle Deep Learning performance is a balancing act between compute and memory. You can think of layout as the grammar of that relationship - the way tensors are arranged, accessed, and aligned.
-...</p></div><footer class=entry-footer><span title='2025-11-05 00:00:01 +0000 UTC'>November 5, 2025</span>&nbsp;·&nbsp;<span>4 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to Tile, Fuse, Repeat: Why Layout Matters for AI Performance" href=https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/></a></article><article class="post-entry tag-entry"><header class=entry-header><h2 class=entry-hint-parent>Booting Up: A Verbose Debug Build of Life and Compilers</h2></header><div class=entry-content><p>“If life had a compiler, I’d probably still be tuning the optimization flags.”
-Welcome to Tiled Thoughts — my verbose debug build.
-I’m Samarth, a compiler engineer at Qualcomm. My work revolves around building efficient ML systems, contributing to open-source compiler infrastructures like LLVM and MLIR, and exploring the intersection of programming languages and machine learning. This blog is where I log the things that don’t quite fit into a Git commit message — reflections, experiments, and observations tiled across compilers, ML systems, open-source, and education.
-...</p></div><footer class=entry-footer><span title='2025-11-05 00:00:00 +0000 UTC'>November 5, 2025</span>&nbsp;·&nbsp;<span>1 min</span>&nbsp;·&nbsp;<span>Samarth Narang</span></footer><a class=entry-link aria-label="post link to Booting Up: A Verbose Debug Build of Life and Compilers" href=https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/></a></article></main><div class=subscribe-section><p>Want to get notified when new posts go live?</p><a href="mailto:sntiledthoughts@gmail.com?subject=Subscribe%20to%20Tiled%20Thoughts&body=Hi%20Samarth,%0A%0AI'd%20like%20to%20subscribe%20to%20Tiled%20Thoughts.%0A%0AThanks!" class=subscribe-button>✉️ Email me to subscribe</a></div><style>.subscribe-section{text-align:center;margin-top:2rem;padding-top:1rem;border-top:1px solid #e5e5e5}.subscribe-button{display:inline-block;background-color:#333;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;transition:background .2s ease-in-out}.subscribe-button:hover{background-color:#555}</style></body></html>
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/tiled-thoughts/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=tiled-thoughts/livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Compilers | Tiled Thoughts</title>
+<meta name="keywords" content="">
+<meta name="description" content="">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/tiled-thoughts/tags/compilers/">
+<link crossorigin="anonymous" href="/tiled-thoughts/assets/css/stylesheet.343cc480b9ffc8f04ccbe5e968ad674880cab773ec19905e93033065c1e7a804.css" integrity="sha256-NDzEgLn/yPBMy&#43;XpaK1nSIDKt3PsGZBekwMwZcHnqAQ=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/tiled-thoughts/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/tiled-thoughts/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/tiled-thoughts/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/tiled-thoughts/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/tiled-thoughts/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" type="application/rss+xml" href="http://localhost:1313/tiled-thoughts/tags/compilers/index.xml" title="rss">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/tiled-thoughts/tags/compilers/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+</head>
+<body class="list" id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/tiled-thoughts/" accesskey="h" title="Tiled Thoughts (Alt + H)">Tiled Thoughts</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://localhost:1313/tiled-thoughts/" title="Home">
+                    <span>Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://localhost:1313/tiled-thoughts/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main"> 
+<header class="page-header">
+  <h1>
+    Compilers
+  </h1>
+</header>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">MLIR for People Who Only Know LLVM IR: A Guided Tour
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>If you’re fluent in LLVM IR, MLIR feels both familiar and weird. This post builds a direct mapping: from modules, functions, and basic blocks to dialects, regions, and patterns.</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-11-25 00:00:00 +0000 UTC'>November 25, 2025</span>&nbsp;·&nbsp;<span>10 min</span></footer>
+  <a class="entry-link" aria-label="post link to MLIR for People Who Only Know LLVM IR: A Guided Tour" href="http://localhost:1313/tiled-thoughts/posts/mlir_for_llvm/"></a>
+</article>
+
+<article class="post-entry tag-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Tile, Fuse, Repeat: Why Layout Matters for AI Performance
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>&lt;!doctype html&gt;Tile, Fuse, Repeat: Why Layout Matters for AI Performance | Tiled Thoughts: A Verbose Debug Build#theme-toggle,.top-link{display:none}@media(prefers-color-scheme:dark){:root{–theme:rgb(29, 30, 32);–entry:rgb(46, 46, 51);–primary:rgb(218, 218, 219);–secondary:rgb(155, 156, 157);–tertiary:rgb(65, 66, 68);–content:rgb(196, 196, 197);–code-block-bg:rgb(46, 46, 51);–code-bg:rgb(55, 56, 62);–border:rgb(51, 51, 51);color-scheme:dark}.list{background:var(–theme)}.toc{background:var(–entry)}}@media(prefers-color-scheme:light){.list::-webkit-scrollbar-thumb{border-color:var(–code-bg)}}localStorage.getItem(“pref-theme”)===“dark”?document.querySelector(“html”).dataset.theme=“dark”:localStorage.getItem(“pref-theme”)===“light”?document.querySelector(“html”).dataset.theme=“light”:window.matchMedia(&#34;(prefers-color-scheme: dark)&#34;).matches?document.querySelector(“html”).dataset.theme=“dark”:document.querySelector(“html”).dataset.theme=“light”{&#34;@context&#34;:“https://schema.org”,&#34;@type&#34;:“BreadcrumbList”,“itemListElement”:[{&#34;@type&#34;:“ListItem”,“position”:1,“name”:“Posts”,“item”:“https://samarthnarang.com/tiled-thoughts/posts/”},{&#34;@type&#34;:“ListItem”,“position”:2,“name”:“Tile, Fuse, Repeat: Why Layout Matters for AI Performance”,“item”:“https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/”}]}{&#34;@context&#34;:“https://schema.org”,&#34;@type&#34;:“BlogPosting”,“headline”:“Tile, Fuse, Repeat: Why Layout Matters for AI Performance”,“name”:“Tile, Fuse, Repeat: Why Layout Matters for AI Performance”,“description”:“How data layout, tiling, and fusion shape modern ML compiler performance - from tensors to cache lines.”,“keywords”:[“MLIR”,“Tiling”,“Compilers”,“Performance”,“Triton”],“articleBody”:&#34; Every time a neural network runs, there’s a silent negotiation between compute and memory.\nIt’s naive to think ML compilers optimize just the compute - the FLOPs. In reality, they optimize movement. The most expensive operation in modern compute isn’t your matrix multiply; it’s getting data from memory to the compute units. This post explores how layout, tiling, and fusion are the unsung heroes of ML compiler performance.\n1. The Compiler’s Hidden Battle Deep Learning performance is a balancing act between compute and memory. You can think of layout as the grammar of that relationship - the way tensors are arranged, accessed, and aligned.\nWhether it’s NHWC vs. NCHW, blocked vs. packed, or interleaved for a Digital Signal Processor (DSP), the layout dictates cache (scratchpad) reuse and parallelism. During my work on ML Compilers, I’ve seen how a well-chosen layout can make or break performance.\n2. Tiling: Breaking Down the Problem Tiling splits large tensors into smaller, cache-sized tiles. Each tile is small enough to fit into fast local memory (L1/L2 or SRAM), reducing cache misses and data movement.\n[ Large Tensor ] | &#43;—–&#43;—–&#43; | | [ Tile 1 ] [ Tile 2 ] -\u003e split into tiles that fit in cache -\u003e process each tile independently -\u003e recombine results -\u003e write back to main memory In MLIR, this concept shows us explicitly:\n%packed = linalg.pack %input inner_dims_pos = [1, 2] inner_tiles = [8, 8] into %packed_type The linalg.pack operation materializes a new layout that is more friendly for the next computation - the compiler’s way of saying “I’ll arrange the furniture before the guests arrive.”\n3. Fusion: Keeping Data Hot Once the data is well-tiled, the next goal is to avoid writing it back.\nThat’s where fusion comes in - combining multiple operations into one loop nest or kernel so intermediate results stay “hot” in registers or cache.\nFor example,\n// Unfused version %matmul_out = linalg.matmul ins(%A, %B : tensor\u003c64x64xf32\u003e, tensor\u003c64x64xf32\u003e) outs(%tmp : tensor\u003c64x64xf32\u003e) %relu = linalg.generic { indexing_maps = [ affine_map\u003c(i,j) -\u003e (i,j)\u003e, // read affine_map\u003c(i,j) -\u003e (i,j)\u003e // write ], iterator_types = [&#34;parallel&#34;, &#34;parallel&#34;] } ins(%matmul_out : tensor\u003c64x64xf32\u003e) outs(%result : tensor\u003c64x64xf32\u003e) { ^bb0(%x: f32, %y: f32): %zero = arith.constant 0.0 : f32 %max = arith.maxf %x, %zero : f32 linalg.yield %max : f32 } -\u003e tensor\u003c64x64xf32\u003e // Fused version %fused = linalg.generic { indexing_maps = [ affine_map\u003c(m,k,n) -\u003e (m,k)\u003e, // A affine_map\u003c(m,k,n) -\u003e (k,n)\u003e, // B affine_map\u003c(m,k,n) -\u003e (m,n)\u003e // C ], iterator_types = [&#34;parallel&#34;, &#34;reduction&#34;, &#34;parallel&#34;] } ins(%A, %B : tensor\u003c64x64xf32\u003e, tensor\u003c64x64xf32\u003e) outs(%result : tensor\u003c64x64xf32\u003e) { ^bb0(%a: f32, %b: f32, %c: f32): %prod = arith.mulf %a, %b : f32 %sum = arith.addf %c, %prod : f32 %zero = arith.constant 0.0 : f32 %relu = arith.maxf %sum, %zero : f32 linalg.yield %relu : f32 } -\u003e tensor\u003c64x64xf32\u003e Fusing eliminates the need to write matmul_out back to memory, keeping data in fast storage and reducing latency. In the fused case, the arith.maxf (ReLU) happens inside the same loop nest as the accumulation, so %sum never leaves registers or the cache. No extra kernel launch, no intermediate writes - just tighter, hotter loops.\n4: The Layout Tug-of-War Layouts aren’t a one-size-fits-all solution. Different hardware architectures have different optimal layouts. For example:\nNHWC favors channels-last access patterns, great for GPUs. NCHW works better for non-tensor-core accelerators. Blocked layouts (used on DSPs and NPUs) help vector units process contiguous data efficiently. Layout propagation passes - such as hoisting or sinking linalg.pack/linalg.unpack operations - help adapt layouts through the computation graph, ensuring each operation gets data in its preferred format.\n5. Case Study: A Small Change, A Big Impact During one optimization session, I experimented with a Softmax kernel that seemed perfectly efficient, until I changed its tile shape:\nTile shape Runtime (µs) Reuse (%) 32 × 4 115 62 8 × 16 68 89 The math didn’t change, the memory pattern did. By aligning the tile shape better with the hardware’s cache lines and vector units, we improved reuse and cut runtime by over 40%.\nIt wasn’t the math - it was the layout.\n6. Why Compilers Care Compilers don’t “see” neurons - they see loops and tiles. They use cost models to score layouts by reuse, footprint, and schedule efficiency. When the score changes, so does the generated code.\nIn practice, cost models try to answer:\nHow many times will this tile be reused before eviction? Will this layout enable vectorization or warp-friendly access? Can we fuse downstream ops without blowing register pressure? Layout is the bridge between algorithm and architecture - and compilers are the translators.\n7. Closing Thoughts Tiling isn’t just an optimization; it’s the compiler’s way of speaking to memory. Every layer or abstraction in the ML Stack: from TensorFlow/PyTorch to XLA/Triton to LLVM, is trying to get that layout right.\nLayout is architecture’s accent. Every tensor speaks it; compilers just translate.\nStay tuned: keep your friends close and your layouts closer.\n&#34;,“wordCount”:“816”,“inLanguage”:“en”,“datePublished”:“2025-11-05T00:00:01Z”,“dateModified”:“2025-11-05T00:00:01Z”,“author”:{&#34;@type&#34;:“Person”,“name”:“Samarth Narang”},“mainEntityOfPage”:{&#34;@type&#34;:“WebPage”,&#34;@id&#34;:“https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/&#34;},&#34;publisher&#34;:{&#34;@type&#34;:&#34;Organization&#34;,&#34;name&#34;:&#34;Tiled Thoughts: A Verbose Debug Build”,“logo”:{&#34;@type&#34;:“ImageObject”,“url”:“https://samarthnarang.com/tiled-thoughts/favicon.ico&#34;}}}Tiled Thoughts: A Verbose Debug Build Home Home » PostsTile, Fuse, Repeat: Why Layout Matters for AI PerformanceHow data layout, tiling, and fusion shape modern ML compiler performance - from tensors to cache lines.November 5, 2025 · 4 min · Samarth NarangTable of Contents1. The Compiler’s Hidden Battle2. Tiling: Breaking Down the Problem3. Fusion: Keeping Data Hot4: The Layout Tug-of-War5. Case Study: A Small Change, A Big Impact6. Why Compilers Care7. Closing ThoughtsEvery time a neural network runs, there’s a silent negotiation between compute and memory.It’s naive to think ML compilers optimize just the compute - the FLOPs. In reality, they optimize movement. The most expensive operation in modern compute isn’t your matrix multiply; it’s getting data from memory to the compute units. This post explores how layout, tiling, and fusion are the unsung heroes of ML compiler performance.1. The Compiler’s Hidden Battle#Deep Learning performance is a balancing act between compute and memory. You can think of layout as the grammar of that relationship - the way tensors are arranged, accessed, and aligned.Whether it’s NHWC vs. NCHW, blocked vs. packed, or interleaved for a Digital Signal Processor (DSP), the layout dictates cache (scratchpad) reuse and parallelism. During my work on ML Compilers, I’ve seen how a well-chosen layout can make or break performance.2. Tiling: Breaking Down the Problem#Tiling splits large tensors into smaller, cache-sized tiles. Each tile is small enough to fit into fast local memory (L1/L2 or SRAM), reducing cache misses and data movement.[ Large Tensor ] | &#43;—–&#43;—–&#43; | | [ Tile 1 ] [ Tile 2 ] -&gt; split into tiles that fit in cache -&gt; process each tile independently -&gt; recombine results -&gt; write back to main memory In MLIR, this concept shows us explicitly:%packed = linalg.pack %input inner_dims_pos = [1, 2] inner_tiles = [8, 8] into %packed_type The linalg.pack operation materializes a new layout that is more friendly for the next computation - the compiler’s way of saying “I’ll arrange the furniture before the guests arrive.”3. Fusion: Keeping Data Hot#Once the data is well-tiled, the next goal is to avoid writing it back.That’s where fusion comes in - combining multiple operations into one loop nest or kernel so intermediate results stay “hot” in registers or cache.For example,// Unfused version %matmul_out = linalg.matmul ins(%A, %B : tensor&lt;64x64xf32&gt;, tensor&lt;64x64xf32&gt;) outs(%tmp : tensor&lt;64x64xf32&gt;) %relu = linalg.generic { indexing_maps = [ affine_map&lt;(i,j) -&gt; (i,j)&gt;, // read affine_map&lt;(i,j) -&gt; (i,j)&gt; // write ], iterator_types = [&#34;parallel&#34;, &#34;parallel&#34;] } ins(%matmul_out : tensor&lt;64x64xf32&gt;) outs(%result : tensor&lt;64x64xf32&gt;) { ^bb0(%x: f32, %y: f32): %zero = arith.constant 0.0 : f32 %max = arith.maxf %x, %zero : f32 linalg.yield %max : f32 } -&gt; tensor&lt;64x64xf32&gt; // Fused version %fused = linalg.generic { indexing_maps = [ affine_map&lt;(m,k,n) -&gt; (m,k)&gt;, // A affine_map&lt;(m,k,n) -&gt; (k,n)&gt;, // B affine_map&lt;(m,k,n) -&gt; (m,n)&gt; // C ], iterator_types = [&#34;parallel&#34;, &#34;reduction&#34;, &#34;parallel&#34;] } ins(%A, %B : tensor&lt;64x64xf32&gt;, tensor&lt;64x64xf32&gt;) outs(%result : tensor&lt;64x64xf32&gt;) { ^bb0(%a: f32, %b: f32, %c: f32): %prod = arith.mulf %a, %b : f32 %sum = arith.addf %c, %prod : f32 %zero = arith.constant 0.0 : f32 %relu = arith.maxf %sum, %zero : f32 linalg.yield %relu : f32 } -&gt; tensor&lt;64x64xf32&gt; Fusing eliminates the need to write matmul_out back to memory, keeping data in fast storage and reducing latency. In the fused case, the arith.maxf (ReLU) happens inside the same loop nest as the accumulation, so %sum never leaves registers or the cache. No extra kernel launch, no intermediate writes - just tighter, hotter loops.4: The Layout Tug-of-War#Layouts aren’t a one-size-fits-all solution. Different hardware architectures have different optimal layouts. For example:NHWC favors channels-last access patterns, great for GPUs.NCHW works better for non-tensor-core accelerators.Blocked layouts (used on DSPs and NPUs) help vector units process contiguous data efficiently.Layout propagation passes - such as hoisting or sinking linalg.pack/linalg.unpack operations - help adapt layouts through the computation graph, ensuring each operation gets data in its preferred format.5. Case Study: A Small Change, A Big Impact#During one optimization session, I experimented with a Softmax kernel that seemed perfectly efficient, until I changed its tile shape:Tile shapeRuntime (µs)Reuse (%)32 × 4115628 × 166889The math didn’t change, the memory pattern did. By aligning the tile shape better with the hardware’s cache lines and vector units, we improved reuse and cut runtime by over 40%.It wasn’t the math - it was the layout.6. Why Compilers Care#Compilers don’t “see” neurons - they see loops and tiles. They use cost models to score layouts by reuse, footprint, and schedule efficiency. When the score changes, so does the generated code.In practice, cost models try to answer:How many times will this tile be reused before eviction?Will this layout enable vectorization or warp-friendly access?Can we fuse downstream ops without blowing register pressure?Layout is the bridge between algorithm and architecture - and compilers are the translators.7. Closing Thoughts#Tiling isn’t just an optimization; it’s the compiler’s way of speaking to memory. Every layer or abstraction in the ML Stack: from TensorFlow/PyTorch to XLA/Triton to LLVM, is trying to get that layout right.Layout is architecture’s accent. Every tensor speaks it; compilers just translate.Stay tuned: keep your friends close and your layouts closer.MLIRTilingCompilersPerformanceTriton« PrevDemystifying GPU Terminology: A Compiler Engineer’s Field Guide Next »Booting Up: A Verbose Debug Build of Life and CompilersWant to get notified when new posts go live?✉️ Email me to subscribe.subscribe-section{text-align:center;margin-top:2rem;padding-top:1rem;border-top:1px solid #e5e5e5}.subscribe-button{display:inline-block;background-color:#333;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;transition:background .2s ease-in-out}.subscribe-button:hover{background-color:#555}
+</p>
+  </div>
+  <footer class="entry-footer"><span title='2025-11-05 00:00:00 +0000 UTC'>November 5, 2025</span>&nbsp;·&nbsp;<span>9 min</span></footer>
+  <a class="entry-link" aria-label="post link to Tile, Fuse, Repeat: Why Layout Matters for AI Performance" href="http://localhost:1313/tiled-thoughts/posts/tile-fuse-repeat/"></a>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2025 <a href="http://localhost:1313/tiled-thoughts/">Tiled Thoughts</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>
