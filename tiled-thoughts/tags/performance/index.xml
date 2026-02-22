@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Performance on Tiled Thoughts: A Verbose Debug Build</title>
+    <link>https://samarthnarang.com/tiled-thoughts/tags/performance/</link>
+    <description>Recent content in Performance on Tiled Thoughts: A Verbose Debug Build</description>
+    <generator>Hugo -- 0.152.2</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 09 Nov 2025 15:48:04 -0500</lastBuildDate>
+    <atom:link href="https://samarthnarang.com/tiled-thoughts/tags/performance/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Data Structure and Iterator Kung Fu in LLVM</title>
+      <link>https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/</link>
+      <pubDate>Sun, 09 Nov 2025 15:48:04 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/</guid>
+      <description>&lt;h1 id=&#34;data-structure-and-iterator-kung-fu-in-llvm&#34;&gt;Data Structure and Iterator Kung Fu in LLVM&lt;/h1&gt;
+&lt;p&gt;Practical patterns, zero-copy views, and safe mutation loops for faster
+LLVM passes.&lt;/p&gt;
+&lt;p&gt;Table of Contents&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Why LLVM ships its own containers&lt;/li&gt;
+&lt;li&gt;Core Value Types (which own nothing)
+&lt;ul&gt;
+&lt;li&gt;StringRef&lt;/li&gt;
+&lt;li&gt;ArrayRef / MutableArrayRef&lt;/li&gt;
+&lt;li&gt;Twine&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Small-Size Optimized Containers
+&lt;ul&gt;
+&lt;li&gt;SmallVector&amp;lt;T, N&amp;gt;&lt;/li&gt;
+&lt;li&gt;SmallString&lt;/li&gt;
+&lt;li&gt;SmallPtrSet&amp;lt;T*, N&amp;gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;“Hashy” Workhorses
+&lt;ul&gt;
+&lt;li&gt;DenseMap&amp;lt;KeyT, ValueT&amp;gt; / DenseSet
+&lt;ul&gt;
+&lt;li&gt;Custom Keys providing DenseMapInfo&amp;lt;Key&amp;gt; with:&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;StringMap
+&lt;ul&gt;
+&lt;li&gt;Erasing While Iterating&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Arenas, Uniquing, and more
+&lt;ul&gt;
+&lt;li&gt;BumpPtrAllocator&lt;/li&gt;
+&lt;li&gt;FoldingSet&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Error handling the LLVM way&lt;/li&gt;
+&lt;li&gt;IR-Centric Must-Knows
+&lt;ul&gt;
+&lt;li&gt;Traversal Idioms&lt;/li&gt;
+&lt;li&gt;Mutation Safety&lt;/li&gt;
+&lt;li&gt;CFG Helpers&lt;/li&gt;
+&lt;li&gt;Range and Iterator (Halloween!) Candy&lt;/li&gt;
+&lt;li&gt;Choosing the Right Data Structure (A Decision Matrix)&lt;/li&gt;
+&lt;li&gt;Common “Shooting Yourself in the Foot” Pitfalls&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Micro-Benchmarks
+&lt;ul&gt;
+&lt;li&gt;Compile and Run&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Conclusion&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;When to use SmallVector vs std::vector, why DenseMap feels like
+cheating, how StringRef &amp;amp; ArrayRef avoid copies, and the iterator
+tricks that make LLVM code elegant and fast.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Demystifying GPU Terminology: A Compiler Engineer’s Field Guide</title>
+      <link>https://samarthnarang.com/tiled-thoughts/posts/demystifying-gpu-terminology/</link>
+      <pubDate>Sun, 09 Nov 2025 00:00:00 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/posts/demystifying-gpu-terminology/</guid>
+      <description>&lt;p&gt;SIMD, warps, occupancy, coalescing, shared memory, spills, and matrix
+units—mapped to real compiler decisions.&lt;/p&gt;
+&lt;p&gt;Table of Contents&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;TL;DR&lt;/li&gt;
+&lt;li&gt;1. Execution Model, Decoded
+&lt;ul&gt;
+&lt;li&gt;SIMT vs SIMD (why is it confusing?)&lt;/li&gt;
+&lt;li&gt;Warps/Wavefronts&lt;/li&gt;
+&lt;li&gt;CTA (Cooperative Thread Array) / Workgroup&lt;/li&gt;
+&lt;li&gt;Occupancy (It’s not a religion)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;2. Memory Hierarchy (where performance is won and lost)
+&lt;ul&gt;
+&lt;li&gt;Coalesced Access (the golden rule)&lt;/li&gt;
+&lt;li&gt;Shared Memory (on-chip scratchpad)&lt;/li&gt;
+&lt;li&gt;Spills (the invisible tax)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;3. Math Units: Matrix Engines, Precision, and Shapes&lt;/li&gt;
+&lt;li&gt;4. Scheduling and Latency Hiding
+&lt;ul&gt;
+&lt;li&gt;Warp Scheduling&lt;/li&gt;
+&lt;li&gt;Divergence and Predication&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;5. Vendor Term Crosswalk&lt;/li&gt;
+&lt;li&gt;6. Checklists you will actually use&lt;/li&gt;
+&lt;li&gt;7. Quick Reference Cheat Sheet&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;GPUs aren’t mysterious - just &lt;em&gt;picky&lt;/em&gt;. Most performance cliffs are not
+about the math; they’re about how warps step, how memory is fetched,
+and how often the registers spill. This post decodes the jargon; and
+to be candid, it is me “spilling” my notes, trying to explain myself.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

@@ -6,6 +6,175 @@
     <description>Recent content in Tags on Tiled Thoughts: A Verbose Debug Build</description>
     <generator>Hugo -- 0.152.2</generator>
     <language>en</language>
+    <lastBuildDate>Sun, 22 Feb 2026 15:48:12 -0500</lastBuildDate>
     <atom:link href="https://samarthnarang.com/tiled-thoughts/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Codegen</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/codegen/</link>
+      <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/codegen/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Compilers</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/compilers/</link>
+      <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/compilers/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>IR</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/ir/</link>
+      <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/ir/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>LLVM</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/llvm/</link>
+      <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/llvm/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>MLIR</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/mlir/</link>
+      <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/mlir/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Optimization</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/optimization/</link>
+      <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/optimization/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Apple-Silicon</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/apple-silicon/</link>
+      <pubDate>Sat, 22 Nov 2025 15:48:43 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/apple-silicon/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Arm64</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/arm64/</link>
+      <pubDate>Sat, 22 Nov 2025 15:48:43 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/arm64/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Neon</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/neon/</link>
+      <pubDate>Sat, 22 Nov 2025 15:48:43 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/neon/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Vectorization</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/vectorization/</link>
+      <pubDate>Sat, 22 Nov 2025 15:48:43 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/vectorization/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>ML</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/ml/</link>
+      <pubDate>Tue, 18 Nov 2025 15:48:26 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/ml/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Quantization</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/quantization/</link>
+      <pubDate>Tue, 18 Nov 2025 15:48:26 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/quantization/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Distributed-Training</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/distributed-training/</link>
+      <pubDate>Sat, 15 Nov 2025 15:48:15 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/distributed-training/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Gpu</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/gpu/</link>
+      <pubDate>Sat, 15 Nov 2025 15:48:15 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/gpu/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Systems</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/systems/</link>
+      <pubDate>Sat, 15 Nov 2025 15:48:15 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/systems/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>C&#43;&#43;</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/c&#43;&#43;/</link>
+      <pubDate>Sun, 09 Nov 2025 15:48:04 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/c&#43;&#43;/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Data-Structures</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/data-structures/</link>
+      <pubDate>Sun, 09 Nov 2025 15:48:04 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/data-structures/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Iterators</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/iterators/</link>
+      <pubDate>Sun, 09 Nov 2025 15:48:04 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/iterators/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Performance</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/performance/</link>
+      <pubDate>Sun, 09 Nov 2025 15:48:04 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/performance/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>CUDA</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/cuda/</link>
+      <pubDate>Sun, 09 Nov 2025 00:00:00 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/cuda/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>ROCm</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/rocm/</link>
+      <pubDate>Sun, 09 Nov 2025 00:00:00 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/rocm/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Triton</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/triton/</link>
+      <pubDate>Sun, 09 Nov 2025 00:00:00 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/triton/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Rewriting</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/rewriting/</link>
+      <pubDate>Sat, 08 Nov 2025 15:48:31 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/rewriting/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Reflection</title>
+      <link>https://samarthnarang.com/tiled-thoughts/tags/reflection/</link>
+      <pubDate>Tue, 04 Nov 2025 15:48:49 -0500</pubDate>
+      <guid>https://samarthnarang.com/tiled-thoughts/tags/reflection/</guid>
+      <description></description>
+    </item>
   </channel>
 </rss>

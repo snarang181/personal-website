@@ -157,7 +157,6 @@ TL;DR: The Mental Mapping Modules, functions, blocks, and values LLVM IR Mental 
   </header>
   <div class="entry-content">
     <p>Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case Study I tried to hand-write NEON intrinsics on Apple Silicon, tune loop unrolling, and beat Clang’s auto-vectorizer. Spoiler: it’s harder than it looks.
-November 22, 2025 · 6 min · Samarth Narang
 On modern CPUs, the “slow” part of your code often isn’t the math, it’s how you feed the math units. Compilers try to fix this with clever optimizations, such as auto-vectorization: transforming scalar loops and turn them into SIMD (Single Instruction, Multiple Data) operations that process multiple data points in parallel.
 ...</p>
   </div>
@@ -171,8 +170,7 @@ On modern CPUs, the “slow” part of your code often isn’t the math, it’s 
     </h2>
   </header>
   <div class="entry-content">
-    <p>Quantization in MLIR: Types, Scales, and Where to Put the q November 18, 2025 · 7 min · Samarth Narang
-Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?
+    <p>Quantization in MLIR: Types, Scales, and Where to Put the q Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?
 In most stacks, quantization lives in an (awkward?) place:
 High-level frameworks (like PyTorch) expose “quantized layers” or post-training quantization APIs. Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts. The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions. MLIR is actually a sweet spot to make quantization less cursed:
 ...</p>
@@ -188,7 +186,6 @@ High-level frameworks (like PyTorch) expose “quantized layers” or post-train
   </header>
   <div class="entry-content">
     <p>How GPUs Talk: A Practical Guide to Multi-GPU Training and Communication An in-depth exploration of multi-GPU training techniques and the communication patterns that enable efficient distributed machine learning.
-November 15, 2025 · 7 min · Samarth Narang
 Table of Contents
 1. Why Multi-GPU Training is a communication problem 2. How GPUs are wired: intra-node and inter-node 3. Core communication patterns 4. Multi-GPU training strategies 4.1 Distributed Data Parallel (DDP) 4.2 Fully Sharded Data Parallel (FSDP) 4.3 Tensor Parallelism 4.4 Pipeline Parallelism 5. Topology-aware communication: rings, trees, and NVLink 6. Hiding communication latency 7. Conclusion When people talk about scaling deep learning, they usually mean throwing more GPUs at the problem. However, horizontal scaling can only get you so far without efficient communication strategies.
 ...</p>
@@ -204,7 +201,6 @@ Table of Contents
   </header>
   <div class="entry-content">
     <p>Data Structure and Iterator Kung Fu in LLVM Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.
-November 9, 2025 · 8 min · Samarth Narang
 Table of Contents
 Why LLVM ships its own containers Core Value Types (which own nothing) StringRef ArrayRef / MutableArrayRef Twine Small-Size Optimized Containers SmallVector&lt;T, N&gt; SmallString SmallPtrSet&lt;T*, N&gt; “Hashy” Workhorses DenseMap&lt;KeyT, ValueT&gt; / DenseSet Custom Keys providing DenseMapInfo&lt;Key&gt; with: StringMap Erasing While Iterating Arenas, Uniquing, and more BumpPtrAllocator FoldingSet Error handling the LLVM way IR-Centric Must-Knows Traversal Idioms Mutation Safety CFG Helpers Range and Iterator (Halloween!) Candy Choosing the Right Data Structure (A Decision Matrix) Common “Shooting Yourself in the Foot” Pitfalls Micro-Benchmarks Compile and Run Conclusion When to use SmallVector vs std::vector, why DenseMap feels like cheating, how StringRef &amp; ArrayRef avoid copies, and the iterator tricks that make LLVM code elegant and fast.
 ...</p>
@@ -235,7 +231,6 @@ TL;DR 1. Execution Model, Decoded SIMT vs SIMD (why is it confusing?) Warps/Wave
   </header>
   <div class="entry-content">
     <p>How Rewriting works in MLIR An in-depth look at the rewriting mechanisms in MLIR and how they enable powerful optimizations.
-November 8, 2025 · 5 min · Samarth Narang
 Table of Contents
 TL;DR Part 1: The moving pieces RewritePatternSet and PatternRewriter Greedy vs. Conversion Greedy (Canonicalization and Local Rewrites) Conversion (Dialect Conversion) Part 2: Your first greedy rewrite pattern. Pattern Definition Part 3 : Running it: Tiny IR &#43; Command Build and run Result Part 4: Dialect Conversion in a nutshell Core ingredients Example: Convert toy.addi to arith.addi Key differences from greedy patterns: Part 5 : Folding vs. Patterns Part 6: Match helpers, benefits, and ordering Part 7: Debugging and guardrails Part 8: Mini LIT Test Example Conclusion Further Reading If you only remember one thing from this post: rewriting in MLIR is “find a pattern, make a change, repeat until more changes can’t be made”, with two key components:
 ...</p>
@@ -246,165 +241,11 @@ TL;DR Part 1: The moving pieces RewritePatternSet and PatternRewriter Greedy vs.
 
 <article class="post-entry"> 
   <header class="entry-header">
-    <h2 class="entry-hint-parent">Tile, Fuse, Repeat: Why Layout Matters for AI Performance
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Tile, Fuse, Repeat: Why Layout Matters for AI Performance November 5, 2025 · 9 min
-&lt;!doctype html&gt;Tile, Fuse, Repeat: Why Layout Matters for AI
-Performance | Tiled Thoughts: A Verbose Debug
-Build#theme-toggle,.top-link{display:none}@media(prefers-color-scheme:dark){:root{–theme:rgb(29,
-30, 32);–entry:rgb(46, 46, 51);–primary:rgb(218, 218,
-219);–secondary:rgb(155, 156, 157);–tertiary:rgb(65, 66,
-68);–content:rgb(196, 196, 197);–code-block-bg:rgb(46, 46,
-51);–code-bg:rgb(55, 56, 62);–border:rgb(51, 51,
-51);color-scheme:dark}.list{background:var(–theme)}.toc{background:var(–entry)}}@media(prefers-color-scheme:light){.list::-webkit-scrollbar-thumb{border-color:var(–code-bg)}}localStorage.getItem(“pref-theme”)===“dark”?document.querySelector(“html”).dataset.theme=“dark”:localStorage.getItem(“pref-theme”)===“light”?document.querySelector(“html”).dataset.theme=“light”:window.matchMedia(&#34;(prefers-color-scheme:
-dark)&#34;).matches?document.querySelector(“html”).dataset.theme=“dark”:document.querySelector(“html”).dataset.theme=“light”{&#34;@context&#34;:“https://schema.org”,&#34;@type&#34;:“BreadcrumbList”,“itemListElement”:[{&#34;@type&#34;:“ListItem”,“position”:1,“name”:“Posts”,“item”:“https://samarthnarang.com/tiled-thoughts/posts/”},{&#34;@type&#34;:“ListItem”,“position”:2,“name”:“Tile,
-Fuse, Repeat: Why Layout Matters for AI
-Performance”,“item”:“https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/”}]}{&#34;@context&#34;:“https://schema.org”,&#34;@type&#34;:“BlogPosting”,“headline”:“Tile,
-Fuse, Repeat: Why Layout Matters for AI Performance”,“name”:“Tile, Fuse,
-Repeat: Why Layout Matters for AI Performance”,“description”:“How data
-layout, tiling, and fusion shape modern ML compiler performance - from
-tensors to cache
-lines.”,“keywords”:[“MLIR”,“Tiling”,“Compilers”,“Performance”,“Triton”],“articleBody”:&#34;
-Every time a neural network runs, there’s a silent negotiation between
-compute and memory.\nIt’s naive to think ML compilers optimize just the
-compute - the FLOPs. In reality, they optimize movement. The most
-expensive operation in modern compute isn’t your matrix multiply; it’s
-getting data from memory to the compute units. This post explores how
-layout, tiling, and fusion are the unsung heroes of ML compiler
-performance.\n1. The Compiler’s Hidden Battle Deep Learning performance
-is a balancing act between compute and memory. You can think of layout
-as the grammar of that relationship - the way tensors are arranged,
-accessed, and aligned.\nWhether it’s NHWC vs. NCHW, blocked vs. packed,
-or interleaved for a Digital Signal Processor (DSP), the layout dictates
-cache (scratchpad) reuse and parallelism. During my work on ML
-Compilers, I’ve seen how a well-chosen layout can make or break
-performance.\n2. Tiling: Breaking Down the Problem Tiling splits large
-tensors into smaller, cache-sized tiles. Each tile is small enough to
-fit into fast local memory (L1/L2 or SRAM), reducing cache misses and
-data movement.\n[ Large Tensor ] | &#43;—–&#43;—–&#43; | | [ Tile 1 ] [ Tile
-2 ] -\u003e split into tiles that fit in cache -\u003e process each
-tile independently -\u003e recombine results -\u003e write back to main
-memory In MLIR, this concept shows us explicitly:\n%packed = linalg.pack
-%input inner_dims_pos = [1, 2] inner_tiles = [8, 8] into
-%packed_type The linalg.pack operation materializes a new layout that is
-more friendly for the next computation - the compiler’s way of saying
-“I’ll arrange the furniture before the guests arrive.”\n3. Fusion:
-Keeping Data Hot Once the data is well-tiled, the next goal is to avoid
-writing it back.\nThat’s where fusion comes in - combining multiple
-operations into one loop nest or kernel so intermediate results stay
-“hot” in registers or cache.\nFor example,\n// Unfused version
-%matmul_out = linalg.matmul ins(%A, %B : tensor\u003c64x64xf32\u003e,
-tensor\u003c64x64xf32\u003e) outs(%tmp : tensor\u003c64x64xf32\u003e)
-%relu = linalg.generic { indexing_maps = [ affine_map\u003c(i,j)
--\u003e (i,j)\u003e, // read affine_map\u003c(i,j) -\u003e (i,j)\u003e
-// write ], iterator_types = [“parallel”, “parallel”] }
-ins(%matmul_out : tensor\u003c64x64xf32\u003e) outs(%result :
-tensor\u003c64x64xf32\u003e) { ^bb0(%x: f32, %y: f32): %zero =
-arith.constant 0.0 : f32 %max = arith.maxf %x, %zero : f32 linalg.yield
-%max : f32 } -\u003e tensor\u003c64x64xf32\u003e // Fused version %fused
-= linalg.generic { indexing_maps = [ affine_map\u003c(m,k,n) -\u003e
-(m,k)\u003e, // A affine_map\u003c(m,k,n) -\u003e (k,n)\u003e, // B
-affine_map\u003c(m,k,n) -\u003e (m,n)\u003e // C ], iterator_types =
-[“parallel”, “reduction”, “parallel”] } ins(%A, %B :
-tensor\u003c64x64xf32\u003e, tensor\u003c64x64xf32\u003e) outs(%result :
-tensor\u003c64x64xf32\u003e) { ^bb0(%a: f32, %b: f32, %c: f32): %prod =
-arith.mulf %a, %b : f32 %sum = arith.addf %c, %prod : f32 %zero =
-arith.constant 0.0 : f32 %relu = arith.maxf %sum, %zero : f32
-linalg.yield %relu : f32 } -\u003e tensor\u003c64x64xf32\u003e Fusing
-eliminates the need to write matmul_out back to memory, keeping data in
-fast storage and reducing latency. In the fused case, the arith.maxf
-(ReLU) happens inside the same loop nest as the accumulation, so %sum
-never leaves registers or the cache. No extra kernel launch, no
-intermediate writes - just tighter, hotter loops.\n4: The Layout
-Tug-of-War Layouts aren’t a one-size-fits-all solution. Different
-hardware architectures have different optimal layouts. For
-example:\nNHWC favors channels-last access patterns, great for GPUs.
-NCHW works better for non-tensor-core accelerators. Blocked layouts
-(used on DSPs and NPUs) help vector units process contiguous data
-efficiently. Layout propagation passes - such as hoisting or sinking
-linalg.pack/linalg.unpack operations - help adapt layouts through the
-computation graph, ensuring each operation gets data in its preferred
-format.\n5. Case Study: A Small Change, A Big Impact During one
-optimization session, I experimented with a Softmax kernel that seemed
-perfectly efficient, until I changed its tile shape:\nTile shape Runtime
-(µs) Reuse (%) 32 × 4 115 62 8 × 16 68 89 The math didn’t change, the
-memory pattern did. By aligning the tile shape better with the
-hardware’s cache lines and vector units, we improved reuse and cut
-runtime by over 40%.\nIt wasn’t the math - it was the layout.\n6. Why
-Compilers Care Compilers don’t “see” neurons - they see loops and tiles.
-They use cost models to score layouts by reuse, footprint, and schedule
-efficiency. When the score changes, so does the generated code.\nIn
-practice, cost models try to answer:\nHow many times will this tile be
-reused before eviction? Will this layout enable vectorization or
-warp-friendly access? Can we fuse downstream ops without blowing
-register pressure? Layout is the bridge between algorithm and
-architecture - and compilers are the translators.\n7. Closing Thoughts
-Tiling isn’t just an optimization; it’s the compiler’s way of speaking
-to memory. Every layer or abstraction in the ML Stack: from
-TensorFlow/PyTorch to XLA/Triton to LLVM, is trying to get that layout
-right.\nLayout is architecture’s accent. Every tensor speaks it;
-compilers just translate.\nStay tuned: keep your friends close and your
-layouts
-closer.\n&#34;,“wordCount”:“816”,“inLanguage”:“en”,“datePublished”:“2025-11-05T00:00:01Z”,“dateModified”:“2025-11-05T00:00:01Z”,“author”:{&#34;@type&#34;:“Person”,“name”:“Samarth
-Narang”},“mainEntityOfPage”:{&#34;@type&#34;:“WebPage”,&#34;@id&#34;:“https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/%22%7D,%22publisher%22:%7B%22@type%22:%22Organization%22,%22name%22:%22Tiled
-Thoughts: A Verbose Debug
-Build”,“logo”:{&#34;@type&#34;:“ImageObject”,“url”:“https://samarthnarang.com/tiled-thoughts/favicon.ico%22%7D%7D%7DTiled
-Thoughts: A Verbose Debug Build Home Home » PostsTile, Fuse, Repeat:
-Why Layout Matters for AI PerformanceHow data layout, tiling, and fusion
-shape modern ML compiler performance - from tensors to cache
-lines.November 5, 2025 · 4 min · Samarth NarangTable of Contents1. The
-Compiler’s Hidden Battle2. Tiling: Breaking Down the Problem3. Fusion:
-Keeping Data Hot4: The Layout Tug-of-War5. Case Study: A Small Change, A
-Big Impact6. Why Compilers Care7. Closing ThoughtsEvery time a neural
-network runs, there’s a silent negotiation between compute and
-memory.It’s naive to think ML compilers optimize just the compute - the
-FLOPs. In reality, they optimize movement. The most expensive operation
-in modern compute isn’t your matrix multiply; it’s getting data from
-memory to the compute units. This post explores how layout, tiling, and
-fusion are the unsung heroes of ML compiler performance.1. The
-Compiler’s Hidden Battle#Deep Learning performance is a balancing act
-between compute and memory. You can think of layout as the grammar of
-that relationship - the way tensors are arranged, accessed, and
-aligned.Whether it’s NHWC vs. NCHW, blocked vs. packed, or interleaved
-for a Digital Signal Processor (DSP), the layout dictates cache
-(scratchpad) reuse and parallelism. During my work on ML Compilers, I’ve
-seen how a well-chosen layout can make or break performance.2. Tiling:
-Breaking Down the Problem#Tiling splits large tensors into smaller,
-cache-sized tiles. Each tile is small enough to fit into fast local
-memory (L1/L2 or SRAM), reducing cache misses and data movement.[ Large
-Tensor ] | &#43;—–&#43;—–&#43; | | [ Tile 1 ] [ Tile 2 ] -&gt; split into
-tiles that fit in cache -&gt; process each tile independently -&gt;
-recombine results -&gt; write back to main memory In MLIR, this concept
-shows us explicitly:%packed = linalg.pack %input inner_dims_pos = [1,
-2] inner_tiles = [8, 8] into %packed_type The linalg.pack operation
-materializes a new layout that is more friendly for the next
-computation - the compiler’s way of saying “I’ll arrange the furniture
-before the guests arrive.”3. Fusion: Keeping Data Hot#Once the data is
-well-tiled, the next goal is to avoid writing it back.That’s where
-fusion comes in - combining multiple operations into one loop nest or
-kernel so intermediate results stay “hot” in registers or cache.For
-example,// Unfused version %matmul_out = linalg.matmul ins(%A, %B :
-tensor&lt;64x64xf32&gt;, tensor&lt;64x64xf32&gt;) outs(%tmp :
-tensor&lt;64x64xf32&gt;) %relu = linalg.generic { indexing_maps = [
-affine_map&lt;(i,j) -&gt; (i,j)&gt;, // read affine_map&lt;(i,j) -&gt; (i,j)&gt; //
-write ], iterator_types = [“parallel”, “parallel”] } ins(%matmul_out
-tensor&lt;64x64xf32&gt;) outs(%result : tensor&lt;64x64xf32&gt;) { ^bb0(%x: f32, %y: f32): %zero = arith.constant 0.0 : f32 %max = arith.maxf %x, %zero : f32 linalg.yield %max : f32 } -&gt; tensor&lt;64x64xf32&gt; // Fused version %fused = linalg.generic { indexing_maps = [ affine_map&lt;(m,k,n) -&gt; (m,k)&gt;, // A affine_map&lt;(m,k,n) -&gt; (k,n)&gt;, // B affine_map&lt;(m,k,n) -&gt; (m,n)&gt; // C ], iterator_types = [“parallel”, “reduction”, “parallel”] } ins(%A, %B : tensor&lt;64x64xf32&gt;, tensor&lt;64x64xf32&gt;) outs(%result : tensor&lt;64x64xf32&gt;) { ^bb0(%a: f32, %b: f32, %c: f32): %prod = arith.mulf %a, %b : f32 %sum = arith.addf %c, %prod : f32 %zero = arith.constant 0.0 : f32 %relu = arith.maxf %sum, %zero : f32 linalg.yield %relu : f32 } -&gt; tensor&lt;64x64xf32&gt; Fusing eliminates the need to write matmul_out back to memory, keeping data in fast storage and reducing latency. In the fused case, the arith.maxf (ReLU) happens inside the same loop nest as the accumulation, so %sum never leaves registers or the cache. No extra kernel launch, no intermediate writes - just tighter, hotter loops.4: The Layout Tug-of-War#Layouts aren’t a one-size-fits-all solution. Different hardware architectures have different optimal layouts. For example:NHWC favors channels-last access patterns, great for GPUs.NCHW works better for non-tensor-core accelerators.Blocked layouts (used on DSPs and NPUs) help vector units process contiguous data efficiently.Layout propagation passes - such as hoisting or sinking linalg.pack/linalg.unpack operations - help adapt layouts through the computation graph, ensuring each operation gets data in its preferred format.5. Case Study: A Small Change, A Big Impact#During one optimization session, I experimented with a Softmax kernel that seemed perfectly efficient, until I changed its tile shape:Tile shapeRuntime (µs)Reuse (%)32 × 4115628 × 166889The math didn’t change, the memory pattern did. By aligning the tile shape better with the hardware’s cache lines and vector units, we improved reuse and cut runtime by over 40%.It wasn’t the math - it was the layout.6. Why Compilers Care#Compilers don’t “see” neurons - they see loops and tiles. They use cost models to score layouts by reuse, footprint, and schedule efficiency. When the score changes, so does the generated code.In practice, cost models try to answer:How many times will this tile be reused before eviction?Will this layout enable vectorization or warp-friendly access?Can we fuse downstream ops without blowing register pressure?Layout is the bridge between algorithm and architecture - and compilers are the translators.7. Closing Thoughts#Tiling isn’t just an optimization; it’s the compiler’s way of speaking to memory. Every layer or abstraction in the ML Stack: from TensorFlow/PyTorch to XLA/Triton to LLVM, is trying to get that layout right.Layout is architecture’s accent. Every tensor speaks it; compilers just translate.Stay tuned: keep your friends close and your layouts closer.MLIRTilingCompilersPerformanceTriton« PrevDemystifying GPU Terminology: A Compiler Engineer’s Field Guide Next »Booting Up: A Verbose Debug Build of Life and CompilersWant to get notified when new posts go live?✉️ Email me to subscribe.subscribe-section{text-align:center;margin-top:2rem;padding-top:1rem;border-top:1px solid #e5e5e5}.subscribe-button{display:inline-block;background-color:#333;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;transition:background .2s ease-in-out}.subscribe-button:hover{background-color:#555}
-...</p>
-  </div>
-  <footer class="entry-footer"><span title='2025-11-05 15:47:38 -0500 EST'>November 5, 2025</span>&nbsp;·&nbsp;<span>9 min</span></footer>
-  <a class="entry-link" aria-label="post link to Tile, Fuse, Repeat: Why Layout Matters for AI Performance" href="https://samarthnarang.com/tiled-thoughts/posts/tile-fuse-repeat/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
     <h2 class="entry-hint-parent">Booting Up: A Verbose Debug Build of Life and Compilers
     </h2>
   </header>
   <div class="entry-content">
     <p>Booting Up: A Verbose Debug Build of Life and Compilers Compiler passes, ML systems, and life — debug logs from the path between code and silicon.
-November 5, 2025 · 1 min · Samarth Narang
 “If life had a compiler, I’d probably still be tuning the optimization flags.”
 Welcome to Tiled Thoughts — my verbose debug build.
 I’m Samarth, a compiler engineer at Qualcomm. My work revolves around building efficient ML systems, contributing to open-source compiler infrastructures like LLVM and MLIR, and exploring the intersection of programming languages and machine learning. This blog is where I log the things that don’t quite fit into a Git commit message — reflections, experiments, and observations tiled across compilers, ML systems, open-source, and education.
