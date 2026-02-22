@@ -13,8 +13,7 @@
       <link>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</link>
       <pubDate>Tue, 04 Nov 2025 15:48:49 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</guid>
-      <description>&lt;h1 id=&#34;booting-up-a-verbose-debug-build-of-life-and-compilers&#34;&gt;Booting Up: A Verbose Debug Build of Life and Compilers&lt;/h1&gt;
-&lt;p&gt;Compiler passes, ML systems, and life — debug logs from the path between
+      <description>&lt;p&gt;Compiler passes, ML systems, and life — debug logs from the path between
 code and silicon.&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;“If life had a compiler, I’d probably still be tuning the optimization

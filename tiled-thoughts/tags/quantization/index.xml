@@ -13,8 +13,7 @@
       <link>https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/</link>
       <pubDate>Tue, 18 Nov 2025 15:48:26 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/</guid>
-      <description>&lt;h1 id=&#34;quantization-in-mlir-types-scales-and-where-to-put-the-q&#34;&gt;Quantization in MLIR: Types, Scales, and Where to Put the q&lt;/h1&gt;
-&lt;p&gt;Quantization is one of those things where everyone unanimously agrees
+      <description>&lt;p&gt;Quantization is one of those things where everyone unanimously agrees
 “it’s important”, but the details are often fuzzy; I mean, no one really
 wants to think about it in their compiler’s IR, right?&lt;/p&gt;
 &lt;p&gt;In most stacks, quantization lives in an (awkward?) place:&lt;/p&gt;

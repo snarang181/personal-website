@@ -13,10 +13,8 @@
       <link>https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/</link>
       <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/</guid>
-      <description>&lt;h1 id=&#34;mlir-for-people-who-only-know-llvm-ir-a-guided-tour&#34;&gt;MLIR for People Who Only Know LLVM IR: A Guided Tour&lt;/h1&gt;
-&lt;p&gt;A practical mental-model bridge from LLVM IR to MLIR for people who
+      <description>&lt;p&gt;A practical mental-model bridge from LLVM IR to MLIR for people who
 already think in terms of functions, basic blocks, and passes.&lt;/p&gt;
-&lt;p&gt;November 25, 2025 · 10 min&lt;/p&gt;
 &lt;p&gt;Table of Contents&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;TL;DR: The Mental Mapping&lt;/li&gt;

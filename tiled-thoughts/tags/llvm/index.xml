@@ -13,10 +13,8 @@
       <link>https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/</link>
       <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/</guid>
-      <description>&lt;h1 id=&#34;mlir-for-people-who-only-know-llvm-ir-a-guided-tour&#34;&gt;MLIR for People Who Only Know LLVM IR: A Guided Tour&lt;/h1&gt;
-&lt;p&gt;A practical mental-model bridge from LLVM IR to MLIR for people who
+      <description>&lt;p&gt;A practical mental-model bridge from LLVM IR to MLIR for people who
 already think in terms of functions, basic blocks, and passes.&lt;/p&gt;
-&lt;p&gt;November 25, 2025 · 10 min&lt;/p&gt;
 &lt;p&gt;Table of Contents&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;TL;DR: The Mental Mapping&lt;/li&gt;
@@ -65,8 +63,7 @@ redesigned the house while you were out:&lt;/p&gt;</description>
       <link>https://samarthnarang.com/tiled-thoughts/posts/vec-playground/</link>
       <pubDate>Sat, 22 Nov 2025 15:48:43 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/vec-playground/</guid>
-      <description>&lt;h1 id=&#34;can-i-beat-clangs-auto-vectorizer-on-apple-silicon-a-saxpy-case-study&#34;&gt;Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case Study&lt;/h1&gt;
-&lt;p&gt;I tried to hand-write NEON intrinsics on Apple Silicon, tune loop
+      <description>&lt;p&gt;I tried to hand-write NEON intrinsics on Apple Silicon, tune loop
 unrolling, and beat Clang’s auto-vectorizer. Spoiler: it’s harder than
 it looks.&lt;/p&gt;
 &lt;p&gt;On modern CPUs, the “slow” part of your code often isn’t the math, it’s
@@ -80,8 +77,7 @@ that process multiple data points in parallel.&lt;/p&gt;</description>
       <link>https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/</link>
       <pubDate>Sun, 09 Nov 2025 15:48:04 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/llvm-ds-iter/</guid>
-      <description>&lt;h1 id=&#34;data-structure-and-iterator-kung-fu-in-llvm&#34;&gt;Data Structure and Iterator Kung Fu in LLVM&lt;/h1&gt;
-&lt;p&gt;Practical patterns, zero-copy views, and safe mutation loops for faster
+      <description>&lt;p&gt;Practical patterns, zero-copy views, and safe mutation loops for faster
 LLVM passes.&lt;/p&gt;
 &lt;p&gt;Table of Contents&lt;/p&gt;
 &lt;ul&gt;
@@ -148,8 +144,7 @@ tricks that make LLVM code elegant and fast.&lt;/p&gt;</description>
       <link>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</link>
       <pubDate>Tue, 04 Nov 2025 15:48:49 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</guid>
-      <description>&lt;h1 id=&#34;booting-up-a-verbose-debug-build-of-life-and-compilers&#34;&gt;Booting Up: A Verbose Debug Build of Life and Compilers&lt;/h1&gt;
-&lt;p&gt;Compiler passes, ML systems, and life — debug logs from the path between
+      <description>&lt;p&gt;Compiler passes, ML systems, and life — debug logs from the path between
 code and silicon.&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;“If life had a compiler, I’d probably still be tuning the optimization

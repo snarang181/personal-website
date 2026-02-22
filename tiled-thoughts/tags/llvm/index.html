@@ -131,8 +131,7 @@
     </h2>
   </header>
   <div class="entry-content">
-    <p>MLIR for People Who Only Know LLVM IR: A Guided Tour A practical mental-model bridge from LLVM IR to MLIR for people who already think in terms of functions, basic blocks, and passes.
-November 25, 2025 · 10 min
+    <p>A practical mental-model bridge from LLVM IR to MLIR for people who already think in terms of functions, basic blocks, and passes.
 Table of Contents
 TL;DR: The Mental Mapping Modules, functions, blocks, and values LLVM IR Mental Model MLIR Mental Model Example: hello, function Dialects: Instruction Sets for Different Domains Dialects as namespaces Operations, Regions, and Nested Control Flow Regions in pratctice Nested IR everywhere Types and Attributes SSA value types Attributes A side-by-side example LLVM IR MLIR Breakdown Passes and pipelines Pattern rewrites: opt passes with a twist How does this become LLVM IR? How to start reading MLIR as an LLVM person Why MLIR? If you already speak LLVM IR, MLIR can feel like a cousin who redesigned the house while you were out:
 ...</p>
@@ -147,7 +146,7 @@ TL;DR: The Mental Mapping Modules, functions, blocks, and values LLVM IR Mental 
     </h2>
   </header>
   <div class="entry-content">
-    <p>Can I Beat Clang’s Auto-Vectorizer on Apple Silicon? A SAXPY Case Study I tried to hand-write NEON intrinsics on Apple Silicon, tune loop unrolling, and beat Clang’s auto-vectorizer. Spoiler: it’s harder than it looks.
+    <p>I tried to hand-write NEON intrinsics on Apple Silicon, tune loop unrolling, and beat Clang’s auto-vectorizer. Spoiler: it’s harder than it looks.
 On modern CPUs, the “slow” part of your code often isn’t the math, it’s how you feed the math units. Compilers try to fix this with clever optimizations, such as auto-vectorization: transforming scalar loops and turn them into SIMD (Single Instruction, Multiple Data) operations that process multiple data points in parallel.
 ...</p>
   </div>
@@ -161,7 +160,7 @@ On modern CPUs, the “slow” part of your code often isn’t the math, it’s 
     </h2>
   </header>
   <div class="entry-content">
-    <p>Data Structure and Iterator Kung Fu in LLVM Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.
+    <p>Practical patterns, zero-copy views, and safe mutation loops for faster LLVM passes.
 Table of Contents
 Why LLVM ships its own containers Core Value Types (which own nothing) StringRef ArrayRef / MutableArrayRef Twine Small-Size Optimized Containers SmallVector&lt;T, N&gt; SmallString SmallPtrSet&lt;T*, N&gt; “Hashy” Workhorses DenseMap&lt;KeyT, ValueT&gt; / DenseSet Custom Keys providing DenseMapInfo&lt;Key&gt; with: StringMap Erasing While Iterating Arenas, Uniquing, and more BumpPtrAllocator FoldingSet Error handling the LLVM way IR-Centric Must-Knows Traversal Idioms Mutation Safety CFG Helpers Range and Iterator (Halloween!) Candy Choosing the Right Data Structure (A Decision Matrix) Common “Shooting Yourself in the Foot” Pitfalls Micro-Benchmarks Compile and Run Conclusion When to use SmallVector vs std::vector, why DenseMap feels like cheating, how StringRef &amp; ArrayRef avoid copies, and the iterator tricks that make LLVM code elegant and fast.
 ...</p>
@@ -176,7 +175,7 @@ Why LLVM ships its own containers Core Value Types (which own nothing) StringRef
     </h2>
   </header>
   <div class="entry-content">
-    <p>Booting Up: A Verbose Debug Build of Life and Compilers Compiler passes, ML systems, and life — debug logs from the path between code and silicon.
+    <p>Compiler passes, ML systems, and life — debug logs from the path between code and silicon.
 “If life had a compiler, I’d probably still be tuning the optimization flags.”
 Welcome to Tiled Thoughts — my verbose debug build.
 I’m Samarth, a compiler engineer at Qualcomm. My work revolves around building efficient ML systems, contributing to open-source compiler infrastructures like LLVM and MLIR, and exploring the intersection of programming languages and machine learning. This blog is where I log the things that don’t quite fit into a Git commit message — reflections, experiments, and observations tiled across compilers, ML systems, open-source, and education.

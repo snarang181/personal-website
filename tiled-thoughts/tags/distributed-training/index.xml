@@ -13,8 +13,7 @@
       <link>https://samarthnarang.com/tiled-thoughts/posts/multi-gpu-comm/</link>
       <pubDate>Sat, 15 Nov 2025 15:48:15 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/multi-gpu-comm/</guid>
-      <description>&lt;h1 id=&#34;how-gpus-talk-a-practical-guide-to-multi-gpu-training-and-communication&#34;&gt;How GPUs Talk: A Practical Guide to Multi-GPU Training and Communication&lt;/h1&gt;
-&lt;p&gt;An in-depth exploration of multi-GPU training techniques and the
+      <description>&lt;p&gt;An in-depth exploration of multi-GPU training techniques and the
 communication patterns that enable efficient distributed machine
 learning.&lt;/p&gt;
 &lt;p&gt;Table of Contents&lt;/p&gt;

@@ -13,10 +13,8 @@
       <link>https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/</link>
       <pubDate>Sun, 22 Feb 2026 15:48:12 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/mlir_for_llvm/</guid>
-      <description>&lt;h1 id=&#34;mlir-for-people-who-only-know-llvm-ir-a-guided-tour&#34;&gt;MLIR for People Who Only Know LLVM IR: A Guided Tour&lt;/h1&gt;
-&lt;p&gt;A practical mental-model bridge from LLVM IR to MLIR for people who
+      <description>&lt;p&gt;A practical mental-model bridge from LLVM IR to MLIR for people who
 already think in terms of functions, basic blocks, and passes.&lt;/p&gt;
-&lt;p&gt;November 25, 2025 · 10 min&lt;/p&gt;
 &lt;p&gt;Table of Contents&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;TL;DR: The Mental Mapping&lt;/li&gt;
@@ -65,8 +63,7 @@ redesigned the house while you were out:&lt;/p&gt;</description>
       <link>https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/</link>
       <pubDate>Tue, 18 Nov 2025 15:48:26 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/quantization-in-mlir/</guid>
-      <description>&lt;h1 id=&#34;quantization-in-mlir-types-scales-and-where-to-put-the-q&#34;&gt;Quantization in MLIR: Types, Scales, and Where to Put the q&lt;/h1&gt;
-&lt;p&gt;Quantization is one of those things where everyone unanimously agrees
+      <description>&lt;p&gt;Quantization is one of those things where everyone unanimously agrees
 “it’s important”, but the details are often fuzzy; I mean, no one really
 wants to think about it in their compiler’s IR, right?&lt;/p&gt;
 &lt;p&gt;In most stacks, quantization lives in an (awkward?) place:&lt;/p&gt;
@@ -127,8 +124,7 @@ to be candid, it is me “spilling” my notes, trying to explain myself.&lt;/p&
       <link>https://samarthnarang.com/tiled-thoughts/posts/rewriting-mlir/</link>
       <pubDate>Sat, 08 Nov 2025 15:48:31 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/rewriting-mlir/</guid>
-      <description>&lt;h1 id=&#34;how-rewriting-works-in-mlir&#34;&gt;How Rewriting works in MLIR&lt;/h1&gt;
-&lt;p&gt;An in-depth look at the rewriting mechanisms in MLIR and how they enable
+      <description>&lt;p&gt;An in-depth look at the rewriting mechanisms in MLIR and how they enable
 powerful optimizations.&lt;/p&gt;
 &lt;p&gt;Table of Contents&lt;/p&gt;
 &lt;ul&gt;
@@ -176,8 +172,7 @@ made”, with two key components:&lt;/p&gt;</description>
       <link>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</link>
       <pubDate>Tue, 04 Nov 2025 15:48:49 -0500</pubDate>
       <guid>https://samarthnarang.com/tiled-thoughts/posts/verbose-debug-build/</guid>
-      <description>&lt;h1 id=&#34;booting-up-a-verbose-debug-build-of-life-and-compilers&#34;&gt;Booting Up: A Verbose Debug Build of Life and Compilers&lt;/h1&gt;
-&lt;p&gt;Compiler passes, ML systems, and life — debug logs from the path between
+      <description>&lt;p&gt;Compiler passes, ML systems, and life — debug logs from the path between
 code and silicon.&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;“If life had a compiler, I’d probably still be tuning the optimization

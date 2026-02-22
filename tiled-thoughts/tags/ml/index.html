@@ -131,7 +131,7 @@
     </h2>
   </header>
   <div class="entry-content">
-    <p>Quantization in MLIR: Types, Scales, and Where to Put the q Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?
+    <p>Quantization is one of those things where everyone unanimously agrees “it’s important”, but the details are often fuzzy; I mean, no one really wants to think about it in their compiler’s IR, right?
 In most stacks, quantization lives in an (awkward?) place:
 High-level frameworks (like PyTorch) expose “quantized layers” or post-training quantization APIs. Backends (like TensorRT, ONNX Runtime) and kernels really care about bit-widths, scales, zero points, and data layouts. The glue in between is often a mishmash of ad-hoc passes, custom operators, and brittle assumptions. MLIR is actually a sweet spot to make quantization less cursed:
 ...</p>
