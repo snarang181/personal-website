@@ -270,7 +270,69 @@ made”, with two key components:">
     <div class="post-meta"><span title='2025-11-08 15:48:31 -0500 EST'>November 8, 2025</span>&nbsp;·&nbsp;<span>6 min</span>
 
 </div>
-  </header> 
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#tldr" aria-label="TL;DR">TL;DR</a></li>
+                <li>
+                    <a href="#part-1-the-moving-pieces" aria-label="Part 1: The moving pieces">Part 1: The moving pieces</a><ul>
+                        
+                <li>
+                    <a href="#rewritepatternset-and-patternrewriter" aria-label="RewritePatternSet and PatternRewriter">RewritePatternSet and PatternRewriter</a></li>
+                <li>
+                    <a href="#greedy-vs-conversion" aria-label="Greedy vs. Conversion">Greedy vs. Conversion</a><ul>
+                        
+                <li>
+                    <a href="#greedy-canonicalization-and-local-rewrites" aria-label="Greedy (Canonicalization and Local Rewrites)">Greedy (Canonicalization and Local Rewrites)</a></li>
+                <li>
+                    <a href="#conversion-dialect-conversion" aria-label="Conversion (Dialect Conversion)">Conversion (Dialect Conversion)</a></li></ul>
+                </li></ul>
+                </li>
+                <li>
+                    <a href="#part-2-your-first-greedy-rewrite-pattern" aria-label="Part 2: Your first greedy rewrite pattern.">Part 2: Your first greedy rewrite pattern.</a><ul>
+                        
+                <li>
+                    <a href="#pattern-definition" aria-label="Pattern Definition">Pattern Definition</a></li>
+                <li>
+                    <a href="#part-3--running-it-tiny-ir--command" aria-label="Part 3 : Running it: Tiny IR &#43; Command">Part 3 : Running it: Tiny IR + Command</a></li>
+                <li>
+                    <a href="#build-and-run" aria-label="Build and run">Build and run</a></li>
+                <li>
+                    <a href="#result" aria-label="Result">Result</a></li></ul>
+                </li>
+                <li>
+                    <a href="#part-4-dialect-conversion-in-a-nutshell" aria-label="Part 4: Dialect Conversion in a nutshell">Part 4: Dialect Conversion in a nutshell</a><ul>
+                        
+                <li>
+                    <a href="#core-ingredients" aria-label="Core ingredients">Core ingredients</a></li>
+                <li>
+                    <a href="#example-convert-toyaddi-to-arithaddi" aria-label="Example: Convert toy.addi to arith.addi">Example: Convert toy.addi to arith.addi</a></li>
+                <li>
+                    <a href="#key-differences-from-greedy-patterns" aria-label="Key differences from greedy patterns:">Key differences from greedy patterns:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#part-5--folding-vs-patterns" aria-label="Part 5 : Folding vs. Patterns">Part 5 : Folding vs. Patterns</a></li>
+                <li>
+                    <a href="#part-6-match-helpers-benefits-and-ordering" aria-label="Part 6: Match helpers, benefits, and ordering">Part 6: Match helpers, benefits, and ordering</a></li>
+                <li>
+                    <a href="#part-7-debugging-and-guardrails" aria-label="Part 7: Debugging and guardrails">Part 7: Debugging and guardrails</a></li>
+                <li>
+                    <a href="#part-8-mini-lit-test-example" aria-label="Part 8: Mini LIT Test Example">Part 8: Mini LIT Test Example</a></li>
+                <li>
+                    <a href="#conclusion" aria-label="Conclusion">Conclusion</a></li>
+                <li>
+                    <a href="#further-reading" aria-label="Further Reading">Further Reading</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
   <div class="post-content"><p>An in-depth look at the rewriting mechanisms in MLIR and how they enable
 powerful optimizations.</p>
 <p>Table of Contents</p>

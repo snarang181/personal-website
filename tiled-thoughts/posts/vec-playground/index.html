@@ -203,7 +203,41 @@ that process multiple data points in parallel.">
     <div class="post-meta"><span title='2025-11-22 15:48:43 -0500 EST'>November 22, 2025</span>&nbsp;·&nbsp;<span>6 min</span>
 
 </div>
-  </header> 
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#code" aria-label="Code">Code</a></li>
+                <li>
+                    <a href="#1-the-playground-vec_bench-on-apple-silicon" aria-label="1. The Playground: vec_bench on Apple Silicon">1. The Playground: vec_bench on Apple Silicon</a><ul>
+                        
+                <li>
+                    <a href="#building-on-apple-silicon" aria-label="Building on Apple Silicon">Building on Apple Silicon</a></li>
+                <li>
+                    <a href="#the-three-saxpy-variants" aria-label="The Three SAXPY Variants">The Three SAXPY Variants</a></li></ul>
+                </li>
+                <li>
+                    <a href="#2-benchmarking-scalar-vs-auto-vectorized-vs-manual-neon" aria-label="2. Benchmarking: Scalar vs Auto-Vectorized vs Manual NEON">2. Benchmarking: Scalar vs Auto-Vectorized vs Manual NEON</a><ul>
+                        
+                <li>
+                    <a href="#observations" aria-label="Observations">Observations</a></li></ul>
+                </li>
+                <li>
+                    <a href="#3-assembly-inspection-whats-going-on-under-the-hood" aria-label="3. Assembly Inspection: What’s Going On Under the Hood?">3. Assembly Inspection: What’s Going On Under the Hood?</a></li>
+                <li>
+                    <a href="#4-conclusion-can-you-beat-clangs-auto-vectorizer" aria-label="4. Conclusion: Can You Beat Clang’s Auto-Vectorizer?">4. Conclusion: Can You Beat Clang’s Auto-Vectorizer?</a></li>
+                <li>
+                    <a href="#some-tips-for-those-wanting-to-explore-further" aria-label="Some tips for those wanting to explore further">Some tips for those wanting to explore further</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
   <div class="post-content"><p>I tried to hand-write NEON intrinsics on Apple Silicon, tune loop
 unrolling, and beat Clang’s auto-vectorizer. Spoiler: it’s harder than
 it looks.</p>

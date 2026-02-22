@@ -310,7 +310,91 @@ tricks that make LLVM code elegant and fast.">
     <div class="post-meta"><span title='2025-11-09 15:48:04 -0500 EST'>November 9, 2025</span>&nbsp;·&nbsp;<span>8 min</span>
 
 </div>
-  </header> 
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#why-llvm-ships-its-own-containers" aria-label="Why LLVM ships its own containers">Why LLVM ships its own containers</a></li>
+                <li>
+                    <a href="#core-value-types-which-own-nothing" aria-label="Core Value Types (which own nothing)">Core Value Types (which own nothing)</a><ul>
+                        
+                <li>
+                    <a href="#stringref" aria-label="StringRef">StringRef</a></li>
+                <li>
+                    <a href="#arrayref--mutablearrayref" aria-label="ArrayRef / MutableArrayRef">ArrayRef / MutableArrayRef</a></li>
+                <li>
+                    <a href="#twine" aria-label="Twine">Twine</a></li></ul>
+                </li>
+                <li>
+                    <a href="#small-size-optimized-containers" aria-label="Small-Size Optimized Containers">Small-Size Optimized Containers</a><ul>
+                        
+                <li>
+                    <a href="#smallvectort-n" aria-label="SmallVector&lt;T, N&gt;">SmallVector&lt;T, N&gt;</a></li>
+                <li>
+                    <a href="#smallstring" aria-label="SmallString">SmallString</a></li>
+                <li>
+                    <a href="#smallptrsett-n" aria-label="SmallPtrSet&lt;T*, N&gt;">SmallPtrSet&lt;T*, N&gt;</a></li></ul>
+                </li>
+                <li>
+                    <a href="#hashy-workhorses" aria-label="“Hashy” Workhorses">“Hashy” Workhorses</a><ul>
+                        
+                <li>
+                    <a href="#densemapkeyt-valuet--denseset" aria-label="DenseMap&lt;KeyT, ValueT&gt; / DenseSet">DenseMap&lt;KeyT, ValueT&gt; / DenseSet</a><ul>
+                        
+                <li>
+                    <a href="#custom-keys-providing-densemapinfokey-with" aria-label="Custom Keys providing DenseMapInfo&lt;Key&gt; with:">Custom Keys providing DenseMapInfo&lt;Key&gt; with:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#stringmap" aria-label="StringMap">StringMap</a><ul>
+                        
+                <li>
+                    <a href="#erasing-while-iterating" aria-label="Erasing While Iterating">Erasing While Iterating</a></li></ul>
+                </li></ul>
+                </li>
+                <li>
+                    <a href="#arenas-uniquing-and-more" aria-label="Arenas, Uniquing, and more">Arenas, Uniquing, and more</a><ul>
+                        
+                <li>
+                    <a href="#bumpptrallocator" aria-label="BumpPtrAllocator">BumpPtrAllocator</a></li>
+                <li>
+                    <a href="#foldingset" aria-label="FoldingSet">FoldingSet</a></li></ul>
+                </li>
+                <li>
+                    <a href="#error-handling-the-llvm-way" aria-label="Error handling the LLVM way">Error handling the LLVM way</a></li>
+                <li>
+                    <a href="#ir-centric-must-knows" aria-label="IR-Centric Must-Knows">IR-Centric Must-Knows</a><ul>
+                        
+                <li>
+                    <a href="#traversal-idioms" aria-label="Traversal Idioms">Traversal Idioms</a></li>
+                <li>
+                    <a href="#mutation-safety" aria-label="Mutation Safety">Mutation Safety</a></li>
+                <li>
+                    <a href="#cfg-helpers" aria-label="CFG Helpers">CFG Helpers</a></li>
+                <li>
+                    <a href="#range-and-iterator-halloween-candy" aria-label="Range and Iterator (Halloween!) Candy">Range and Iterator (Halloween!) Candy</a></li>
+                <li>
+                    <a href="#choosing-the-right-data-structure-a-decision-matrix" aria-label="Choosing the Right Data Structure (A Decision Matrix)">Choosing the Right Data Structure (A Decision Matrix)</a></li>
+                <li>
+                    <a href="#common-shooting-yourself-in-the-foot-pitfalls" aria-label="Common “Shooting Yourself in the Foot” Pitfalls">Common “Shooting Yourself in the Foot” Pitfalls</a></li></ul>
+                </li>
+                <li>
+                    <a href="#micro-benchmarks" aria-label="Micro-Benchmarks">Micro-Benchmarks</a><ul>
+                        
+                <li>
+                    <a href="#compile-and-run" aria-label="Compile and Run">Compile and Run</a></li></ul>
+                </li>
+                <li>
+                    <a href="#conclusion" aria-label="Conclusion">Conclusion</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
   <div class="post-content"><p>Practical patterns, zero-copy views, and safe mutation loops for faster
 LLVM passes.</p>
 <p>Table of Contents</p>

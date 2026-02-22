@@ -212,7 +212,33 @@ MLIR is actually a sweet spot to make quantization less cursed:">
     <div class="post-meta"><span title='2025-11-18 15:48:26 -0500 EST'>November 18, 2025</span>&nbsp;·&nbsp;<span>7 min</span>
 
 </div>
-  </header> 
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#1-quick-mental-model-what-are-we-even-quantizing" aria-label="1. Quick mental model: What are we even quantizing?">1. Quick mental model: What are we even quantizing?</a></li>
+                <li>
+                    <a href="#2-quantized-types-putting-scale-and-zero-point-in-the-type-system" aria-label="2. Quantized types: putting scale and zero point in the type system">2. Quantized types: putting scale and zero point in the type system</a></li>
+                <li>
+                    <a href="#3-quantize-and-dequantize-ops-where-do-we-switch-domains" aria-label="3. quantize and dequantize ops: where do we switch domains?">3. quantize and dequantize ops: where do we switch domains?</a></li>
+                <li>
+                    <a href="#4-quantization-and-linalg-generic-ops-concrete-kernels" aria-label="4. Quantization and linalg: generic ops, concrete kernels">4. Quantization and linalg: generic ops, concrete kernels</a></li>
+                <li>
+                    <a href="#5-quantization-friendly-fusion-and-vectorization" aria-label="5. Quantization-friendly fusion and vectorization">5. Quantization-friendly fusion and vectorization</a></li>
+                <li>
+                    <a href="#6-where-to-put-the-q-design-considerations" aria-label="6. Where to put the “q”: design considerations">6. Where to put the “q”: design considerations</a></li>
+                <li>
+                    <a href="#7-design-questions-to-ponder" aria-label="7. Design questions to ponder">7. Design questions to ponder</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
   <div class="post-content"><p>Quantization is one of those things where everyone unanimously agrees
 “it’s important”, but the details are often fuzzy; I mean, no one really
 wants to think about it in their compiler’s IR, right?</p>

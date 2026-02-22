@@ -231,7 +231,43 @@ only get you so far without efficient communication strategies.">
     <div class="post-meta"><span title='2025-11-15 15:48:15 -0500 EST'>November 15, 2025</span>&nbsp;·&nbsp;<span>7 min</span>
 
 </div>
-  </header> 
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#1-why-multi-gpu-training-is-a-communication-problem" aria-label="1. Why Multi-GPU Training is a communication problem">1. Why Multi-GPU Training is a communication problem</a></li>
+                <li>
+                    <a href="#2-how-gpus-are-wired-intra-node-and-inter-node" aria-label="2. How GPUs are wired: intra-node and inter-node">2. How GPUs are wired: intra-node and inter-node</a></li>
+                <li>
+                    <a href="#3-core-communication-patterns" aria-label="3. Core communication patterns">3. Core communication patterns</a></li>
+                <li>
+                    <a href="#4-multi-gpu-training-strategies" aria-label="4. Multi-GPU training strategies">4. Multi-GPU training strategies</a><ul>
+                        
+                <li>
+                    <a href="#41-distributed-data-parallel-ddp" aria-label="4.1 Distributed Data Parallel (DDP)">4.1 Distributed Data Parallel (DDP)</a></li>
+                <li>
+                    <a href="#42-fully-sharded-data-parallel-fsdp" aria-label="4.2 Fully Sharded Data Parallel (FSDP)">4.2 Fully Sharded Data Parallel (FSDP)</a></li>
+                <li>
+                    <a href="#43-tensor-parallelism" aria-label="4.3 Tensor Parallelism">4.3 Tensor Parallelism</a></li>
+                <li>
+                    <a href="#44-pipeline-parallelism" aria-label="4.4 Pipeline Parallelism">4.4 Pipeline Parallelism</a></li></ul>
+                </li>
+                <li>
+                    <a href="#5-topology-aware-communication-rings-trees-and-nvlink" aria-label="5. Topology-aware communication: rings, trees, and NVLink">5. Topology-aware communication: rings, trees, and NVLink</a></li>
+                <li>
+                    <a href="#6-hiding-communication-latency" aria-label="6. Hiding communication latency">6. Hiding communication latency</a></li>
+                <li>
+                    <a href="#7-conclusion" aria-label="7. Conclusion">7. Conclusion</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
   <div class="post-content"><p>An in-depth exploration of multi-GPU training techniques and the
 communication patterns that enable efficient distributed machine
 learning.</p>

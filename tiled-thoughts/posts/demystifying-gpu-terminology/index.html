@@ -260,7 +260,59 @@ to be candid, it is me “spilling” my notes, trying to explain myself.">
     <div class="post-meta"><span title='2025-11-09 00:00:00 -0500 EST'>November 9, 2025</span>&nbsp;·&nbsp;<span>5 min</span>
 
 </div>
-  </header> 
+  </header> <div class="toc">
+    <details  open>
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#tldr" aria-label="TL;DR">TL;DR</a></li>
+                <li>
+                    <a href="#1-execution-model-decoded" aria-label="1. Execution Model, Decoded">1. Execution Model, Decoded</a><ul>
+                        
+                <li>
+                    <a href="#simt-vs-simd-why-is-it-confusing" aria-label="SIMT vs SIMD (why is it confusing?)">SIMT vs SIMD (why is it confusing?)</a></li>
+                <li>
+                    <a href="#warpswavefronts" aria-label="Warps/Wavefronts">Warps/Wavefronts</a></li>
+                <li>
+                    <a href="#cta-cooperative-thread-array--workgroup" aria-label="CTA (Cooperative Thread Array) / Workgroup">CTA (Cooperative Thread Array) / Workgroup</a></li>
+                <li>
+                    <a href="#occupancy-its-not-a-religion" aria-label="Occupancy (It’s not a religion)">Occupancy (It’s not a religion)</a></li></ul>
+                </li>
+                <li>
+                    <a href="#2-memory-hierarchy-where-performance-is-won-and-lost" aria-label="2. Memory Hierarchy (where performance is won and lost)">2. Memory Hierarchy (where performance is won and lost)</a><ul>
+                        
+                <li>
+                    <a href="#coalesced-access-the-golden-rule" aria-label="Coalesced Access (the golden rule)">Coalesced Access (the golden rule)</a></li>
+                <li>
+                    <a href="#shared-memory-on-chip-scratchpad" aria-label="Shared Memory (on-chip scratchpad)">Shared Memory (on-chip scratchpad)</a></li>
+                <li>
+                    <a href="#spills-the-invisible-tax" aria-label="Spills (the invisible tax)">Spills (the invisible tax)</a></li></ul>
+                </li>
+                <li>
+                    <a href="#3-math-units-matrix-engines-precision-and-shapes" aria-label="3. Math Units: Matrix Engines, Precision, and Shapes">3. Math Units: Matrix Engines, Precision, and Shapes</a></li>
+                <li>
+                    <a href="#4-scheduling-and-latency-hiding" aria-label="4. Scheduling and Latency Hiding">4. Scheduling and Latency Hiding</a><ul>
+                        
+                <li>
+                    <a href="#warp-scheduling" aria-label="Warp Scheduling">Warp Scheduling</a></li>
+                <li>
+                    <a href="#divergence-and-predication" aria-label="Divergence and Predication">Divergence and Predication</a></li></ul>
+                </li>
+                <li>
+                    <a href="#5-vendor-term-crosswalk" aria-label="5. Vendor Term Crosswalk">5. Vendor Term Crosswalk</a></li>
+                <li>
+                    <a href="#6-checklists-you-will-actually-use" aria-label="6. Checklists you will actually use">6. Checklists you will actually use</a></li>
+                <li>
+                    <a href="#7-quick-reference-cheat-sheet" aria-label="7. Quick Reference Cheat Sheet">7. Quick Reference Cheat Sheet</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
   <div class="post-content"><p>SIMD, warps, occupancy, coalescing, shared memory, spills, and matrix
 units—mapped to real compiler decisions.</p>
 <p>Table of Contents</p>
