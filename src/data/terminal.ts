@@ -25,9 +25,7 @@ deep learning compiler engineer, <span class="t">nvidia</span>
 
 <span class="k">daily</span>       c++  python  mlir  llvm
 <span class="k">often</span>       pytorch  assembly  unix
-<span class="k">sometimes</span>   java  sql  flutter
-
-<span class="c"># honest labels, not a wish list</span>`,
+<span class="k">sometimes</span>   java  sql  flutter`,
 
   `<span class="c">$</span> <span class="o">tail</span> -f now.log
 
