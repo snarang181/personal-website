@@ -1,0 +1,109 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../../layouts/Base.astro';
+import { site } from '../../../data/site';
+import '../../../styles/prose.css';
+
+export async function getStaticPaths() {
+  const posts = (await getCollection('writing', ({ data }) => !data.draft)).sort(
+    (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+  );
+
+  return posts.map((post, i) => ({
+    params: { slug: post.id },
+    props: {
+      post,
+      newer: i > 0 ? posts[i - 1] : null,
+      older: i < posts.length - 1 ? posts[i + 1] : null,
+    },
+  }));
+}
+
+const { post, newer, older } = Astro.props;
+const { Content, headings } = await render(post);
+
+const words = post.body?.split(/\s+/).filter(Boolean).length ?? 0;
+const minutes = Math.max(1, Math.round(words / 220));
+
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.date.toISOString(),
+  keywords: post.data.tags.join(', '),
+  author: { '@type': 'Person', name: site.name, url: site.url },
+  mainEntityOfPage: new URL(Astro.url.pathname, Astro.site).href,
+};
+---
+
+<Base
+  title={`${post.data.title} — Tiled Thoughts`}
+  description={post.data.description}
+  ogType="article"
+  jsonLd={jsonLd}
+>
+  <div class="post-wrap" id="main">
+    <a class="backlink" href="/tiled-thoughts/">← Tiled Thoughts</a>
+
+    <header class="post-head">
+      <div class="post-meta">
+        <time datetime={post.data.date.toISOString()}>{fmt(post.data.date)}</time>
+        <span class="dot">·</span>
+        <span>{minutes} min read</span>
+      </div>
+      <h1>{post.data.title}</h1>
+      {post.data.tags.length > 0 && (
+        <ul class="post-tags">{post.data.tags.map((t) => <li>{t}</li>)}</ul>
+      )}
+    </header>
+
+    {post.data.showToc && toc.length > 2 && (
+      <details class="toc" open>
+        <summary>Contents</summary>
+        <ol>
+          {toc.map((h) => (
+            <li class={h.depth === 3 ? 'd3' : ''}><a href={`#${h.slug}`}>{h.text}</a></li>
+          ))}
+        </ol>
+      </details>
+    )}
+
+    <article class="prose"><Content /></article>
+
+    {(newer || older) && (
+      <nav class="post-nav" aria-label="More posts">
+        {older ? (
+          <a href={`/tiled-thoughts/posts/${older.id}/`}>
+            <span class="dir">← Older</span>
+            <span class="t">{older.data.title}</span>
+          </a>
+        ) : <span />}
+        {newer && (
+          <a class="next" href={`/tiled-thoughts/posts/${newer.id}/`}>
+            <span class="dir">Newer →</span>
+            <span class="t">{newer.data.title}</span>
+          </a>
+        )}
+      </nav>
+    )}
+  </div>
+
+  <script>
+    /* Deep-link affordance on headings. Progressive enhancement: the ids are
+       already server-rendered, so the TOC works with or without this. */
+    for (const h of document.querySelectorAll<HTMLElement>('.prose h2[id], .prose h3[id]')) {
+      const a = document.createElement('a');
+      a.className = 'anchor';
+      a.href = `#${h.id}`;
+      a.textContent = '#';
+      a.setAttribute('aria-label', `Link to “${h.textContent?.trim()}”`);
+      h.appendChild(a);
+    }
+  </script>
+</Base>

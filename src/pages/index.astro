@@ -1,0 +1,247 @@
+---
+import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
+import portrait from '../assets/profile-photo.jpg';
+import Base from '../layouts/Base.astro';
+import Rail from '../components/Rail.astro';
+import PassBar from '../components/PassBar.astro';
+import TerminalCard from '../components/TerminalCard.astro';
+import Job from '../components/Job.astro';
+import { site } from '../data/site';
+import { experience, education } from '../data/experience';
+import { publications } from '../data/publications';
+import { featured, apps, skills } from '../data/projects';
+
+const posts = (await getCollection('writing', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 5);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: site.name,
+  jobTitle: site.role,
+  url: site.url,
+  email: `mailto:${site.email}`,
+  sameAs: [site.github],
+  worksFor: { '@type': 'Organization', name: 'NVIDIA' },
+  address: { '@type': 'PostalAddress', addressLocality: 'New York', addressRegion: 'NY' },
+  alumniOf: education.map((e) => ({ '@type': 'CollegeOrUniversity', name: e.org })),
+  knowsAbout: ['MLIR', 'LLVM', 'Compilers', 'GPU codegen', 'Machine learning systems'],
+};
+---
+
+<Base jsonLd={jsonLd}>
+  <div class="shell">
+    <Rail home />
+
+    <main id="main">
+      <PassBar home />
+
+      <TerminalCard />
+
+      <section id="about" class="rv">
+        <p class="label"><b>about</b></p>
+        <h2>What I do.</h2>
+        <div class="about-grid">
+          <div>
+            <p class="lede">
+              I'm a deep learning compiler engineer at <strong>NVIDIA</strong>, working on formal
+              methods of verification for MLIR-based deep learning compilers. Before that I spent
+              two years at
+              {' '}<strong>Qualcomm</strong> as one of the core contributors to a new MLIR compiler
+              for AI inference on Hexagon NPUs.
+            </p>
+            <p>
+              My background and interests lie in compiler construction, machine learning, computer
+              architecture and systems programming.
+            </p>
+            <p>Outside of work I try (and mostly fail) to keep things balanced:</p>
+            <ul class="offhours">
+              <li>🍜 major foodie</li>
+              <li>🏋️ regular at the gym</li>
+              <li>✈️ always planning the next trip</li>
+              <li>⚽ follows almost every sport</li>
+              <li>♟️ former competitive chess player</li>
+            </ul>
+          </div>
+          <figure class="portrait">
+            <Image
+              src={portrait}
+              alt={site.name}
+              widths={[190, 380, 760]}
+              sizes="(min-width: 760px) 190px, 100vw"
+              loading="lazy"
+            />
+          </figure>
+        </div>
+      </section>
+
+      <section id="experience" class="rv">
+        <p class="label"><b>experience</b></p>
+        <h2>Work.</h2>
+        <div class="tl">
+          {experience.map((role) => <Job role={role} />)}
+        </div>
+      </section>
+
+      <section id="education" class="rv">
+        <p class="label"><b>education</b></p>
+        <h2>Degrees.</h2>
+        <div class="tl">
+          {education.map((role) => <Job role={role} />)}
+        </div>
+      </section>
+
+      <section id="publications" class="rv">
+        <p class="label"><b>publications</b></p>
+        <h2>Papers.</h2>
+        <ul class="pubs">
+          {publications.map((p) => (
+            <li class="pub">
+              <span class="venue">{p.venue}</span>
+              <h3><a href={p.url} target="_blank" rel="noopener">{p.title}</a></h3>
+              <p class="meta" set:html={p.authors} />
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section id="projects" class="rv">
+        <p class="label"><b>projects</b></p>
+        <h2>Personal time.</h2>
+
+        <div class="feat">
+          {featured.map((c) => (
+            <article class="card">
+              <div class="card-head">
+                <h3>{c.title}</h3>
+                <span class="dialect">{c.dialect}</span>
+              </div>
+              <p set:html={c.body} />
+              {c.ops && (
+                <div class="ops">{c.ops.map((op) => <code>{op}</code>)}</div>
+              )}
+              <div class="links">
+                {c.links.map((l) => (
+                  <a href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <p class="label" style="margin-top:36px">earlier · mobile</p>
+        <ul class="apps">
+          {apps.map((a) => (
+            <li>
+              <div class="row"><h3>{a.title}</h3><span class="stack">{a.stack}</span></div>
+              <p>
+                <Fragment set:html={a.body} />{' '}
+                <a class="inline-link" href={a.link.href} target="_blank" rel="noopener">{a.link.label}</a>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section id="writing" class="rv">
+        <p class="label"><b>writing</b></p>
+        <h2>Tiled Thoughts <span style="color:var(--muted);font-weight:400">— a verbose debug build</span></h2>
+        <p>
+          Compiler passes, ML systems, and the occasional detour. Long-form notes from the path
+          between code and silicon.
+        </p>
+        <ul class="posts">
+          {posts.map((post) => (
+            <li>
+              <a href={`/tiled-thoughts/posts/${post.id}/`}>
+                <h3>{post.data.title} <span class="arrow">↗</span></h3>
+                <p>{post.data.description}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+        <div class="links" style="margin-top:18px"><a href="/tiled-thoughts/">→ All posts</a></div>
+      </section>
+
+      <section id="skills" class="rv">
+        <p class="label"><b>skills</b></p>
+        <h2>Tools.</h2>
+        <div class="manifest">
+          <div>
+            <h3>Proficient</h3>
+            <ul class="chips">{skills.proficient.map((s) => <li>{s}</li>)}</ul>
+          </div>
+          <div>
+            <h3>Familiar</h3>
+            <ul class="chips soft">{skills.familiar.map((s) => <li>{s}</li>)}</ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="rv">
+        <p class="label"><b>contact</b></p>
+        <div class="contact">
+          <h2>Get in touch.</h2>
+          <p>Reach out to talk MLIR, compilers, architecture, etc. etc.</p>
+          <div class="cta">
+            <a class="btn" href={`mailto:${site.email}`}>Email me</a>
+            <a class="btn ghost" href={site.github} target="_blank" rel="noopener">GitHub</a>
+            <a class="btn ghost" href={site.blog}>Read the blog</a>
+          </div>
+          <p class="fineprint">
+            New York, NY{site.showPhone ? ` · ${site.phone}` : ''}
+          </p>
+        </div>
+      </section>
+
+      <footer>
+        <span>© {new Date().getFullYear()} {site.name}</span>
+        <span>Built with Astro. No tracking.</span>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    /* section nav: highlight whichever section dominates the viewport */
+    const sections = Array.from(document.querySelectorAll<HTMLElement>('main section[id]'));
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-nav]'));
+    const fill = document.querySelector<HTMLElement>('.pipe .fill');
+    const pipeLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.pipe [data-nav]'));
+
+    function setActive(id: string) {
+      for (const a of links) {
+        a.setAttribute('aria-current', a.dataset.nav === id ? 'true' : 'false');
+      }
+      if (fill && pipeLinks.length) {
+        const idx = pipeLinks.findIndex((a) => a.dataset.nav === id);
+        if (idx > -1) {
+          const top = pipeLinks[0].offsetTop;
+          fill.style.height = pipeLinks[idx].offsetTop - top + 14 + 'px';
+        }
+      }
+    }
+
+    if ('IntersectionObserver' in window && sections.length) {
+      const seen: Record<string, number> = {};
+      const so = new IntersectionObserver(
+        (entries) => {
+          for (const en of entries) seen[en.target.id] = en.intersectionRatio;
+          let best: string | null = null;
+          let bestR = 0;
+          for (const s of sections) {
+            const r = seen[s.id] || 0;
+            if (r > bestR) {
+              bestR = r;
+              best = s.id;
+            }
+          }
+          if (best) setActive(best);
+        },
+        { threshold: [0, 0.15, 0.35, 0.6, 1], rootMargin: '-15% 0px -45% 0px' },
+      );
+      for (const s of sections) so.observe(s);
+    }
+  </script>
+</Base>

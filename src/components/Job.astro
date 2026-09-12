@@ -1,0 +1,33 @@
+---
+import type { Role } from '../data/experience';
+
+interface Props { role: Role }
+const { role } = Astro.props;
+---
+
+<article class="job">
+  <p class="when">{role.start} —<br />{role.end}</p>
+  <div>
+    <div class="job-head">
+      <span class:list={['logo', role.logoFill && 'fill']}>
+        <img src={role.logo} alt="" loading="lazy" width="32" height="32" decoding="async" />
+      </span>
+      <h3>{role.title} <span class="at">· {role.org}</span></h3>
+    </div>
+
+    {role.groups?.map((g) => (
+      <>
+        {g.heading && <p class="sub">{g.heading}</p>}
+        <ul>
+          {g.points.map((p) => <li set:html={p} />)}
+        </ul>
+      </>
+    ))}
+
+    {role.tags && (
+      <ul class="tags">
+        {role.tags.map((t) => <li>{t}</li>)}
+      </ul>
+    )}
+  </div>
+</article>

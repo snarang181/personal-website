@@ -1,0 +1,113 @@
+---
+import { stages, panes, filename, caption } from '../data/terminal';
+---
+
+<section aria-labelledby="term-h" class="rv">
+  <h2 id="term-h" class="visually-hidden">About this site</h2>
+  <div class="term">
+    <div class="term-top">
+      <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="term-title">{filename}</span>
+      <div class="stages" role="tablist" aria-label="Sections">
+        {stages.map((s, i) => (
+          <>
+            <button
+              role="tab"
+              type="button"
+              id={`stage-tab-${i}`}
+              aria-controls={`stage-pane-${i}`}
+              aria-selected={i === 0 ? 'true' : 'false'}
+              data-s={i}
+            >{s}</button>
+            {i < stages.length - 1 && <span class="sep" aria-hidden="true">›</span>}
+          </>
+        ))}
+      </div>
+    </div>
+
+    <div class="term-body">
+      {panes.map((html, i) => (
+        <pre
+          data-p={i}
+          id={`stage-pane-${i}`}
+          role="tabpanel"
+          aria-labelledby={`stage-tab-${i}`}
+          hidden={i !== 0}
+          set:html={html}
+        />
+      ))}
+    </div>
+
+    <div class="term-foot">
+      <p>{caption}</p>
+      <span class="bar" aria-hidden="true"><i></i></span>
+    </div>
+  </div>
+</section>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.stages button'));
+  const panes = Array.from(document.querySelectorAll<HTMLPreElement>('.term-body pre'));
+  const meter = document.querySelector<HTMLElement>('.bar i');
+  const card = document.querySelector<HTMLElement>('.term');
+
+  let cur = 0;
+  let timer: number | null = null;
+  let t0 = 0;
+  const HOLD = 4200;
+
+  function show(i: number) {
+    cur = i;
+    tabs.forEach((b, n) => b.setAttribute('aria-selected', n === i ? 'true' : 'false'));
+    panes.forEach((p, n) => (p.hidden = n !== i));
+  }
+  function tick(ts: number) {
+    if (!t0) t0 = ts;
+    const p = (ts - t0) / HOLD;
+    if (meter) meter.style.width = Math.min(p, 1) * 100 + '%';
+    if (p >= 1) {
+      t0 = ts;
+      show((cur + 1) % panes.length);
+    }
+    timer = requestAnimationFrame(tick);
+  }
+  function stop() {
+    if (timer) {
+      cancelAnimationFrame(timer);
+      timer = null;
+    }
+    if (meter) meter.style.width = '0%';
+  }
+
+  tabs.forEach((b, n) =>
+    b.addEventListener('click', () => {
+      stop();
+      show(n);
+    }),
+  );
+
+  tabs.forEach((b, n) =>
+    b.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      stop();
+      const next = (n + d + tabs.length) % tabs.length;
+      show(next);
+      tabs[next].focus();
+    }),
+  );
+
+  if (!reduce && card && panes.length) {
+    card.addEventListener('pointerenter', stop);
+    card.addEventListener('pointerleave', () => {
+      if (!timer) {
+        t0 = 0;
+        timer = requestAnimationFrame(tick);
+      }
+    });
+    card.addEventListener('focusin', stop);
+    timer = requestAnimationFrame(tick);
+  }
+</script>

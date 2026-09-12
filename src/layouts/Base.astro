@@ -1,0 +1,110 @@
+---
+import { Font } from 'astro:assets';
+import { site } from '../data/site';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogType?: 'website' | 'article';
+  jsonLd?: Record<string, unknown>;
+}
+
+const {
+  title = site.seo.title,
+  description = site.seo.description,
+  ogType = 'website',
+  jsonLd,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL('/og.png', Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={site.name} />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#0a0b0e" />
+
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <link rel="alternate" type="application/rss+xml" title="Tiled Thoughts" href="/rss.xml" />
+
+    <Font cssVariable="--font-mono" preload />
+    <Font cssVariable="--font-sans" preload />
+
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="mesh" aria-hidden="true"></div>
+    <div class="spot" aria-hidden="true"></div>
+    <slot />
+
+    <script>
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* cursor spotlight */
+      if (!reduce && matchMedia('(pointer: fine)').matches) {
+        let raf: number | null = null;
+        let lx = 0;
+        let ly = 0;
+        addEventListener(
+          'pointermove',
+          (e) => {
+            lx = e.clientX;
+            ly = e.clientY;
+            if (raf) return;
+            raf = requestAnimationFrame(() => {
+              document.documentElement.style.setProperty('--mx', lx + 'px');
+              document.documentElement.style.setProperty('--my', ly + 'px');
+              raf = null;
+            });
+          },
+          { passive: true },
+        );
+      }
+
+      /* reveal — only pre-hide what is already below the fold, so the first
+         painted frame is complete */
+      if (!reduce && 'IntersectionObserver' in window) {
+        const items = Array.from(document.querySelectorAll<HTMLElement>('.rv'));
+        for (const el of items) {
+          if (el.getBoundingClientRect().top > innerHeight * 0.9) el.classList.add('pre');
+        }
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const en of entries) {
+              if (en.isIntersecting) {
+                en.target.classList.remove('pre');
+                io.unobserve(en.target);
+              }
+            }
+          },
+          { rootMargin: '0px 0px -12% 0px' },
+        );
+        for (const el of items) io.observe(el);
+      }
+    </script>
+  </body>
+</html>

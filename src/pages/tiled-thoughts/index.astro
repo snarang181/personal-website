@@ -1,0 +1,54 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import '../../styles/prose.css';
+
+const posts = (await getCollection('writing', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const byYear = new Map<number, typeof posts>();
+for (const p of posts) {
+  const y = p.data.date.getUTCFullYear();
+  if (!byYear.has(y)) byYear.set(y, []);
+  byYear.get(y)!.push(p);
+}
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+---
+
+<Base
+  title="Tiled Thoughts — a verbose debug build"
+  description="Compiler passes, ML systems, and the occasional detour. Long-form notes from the path between code and silicon."
+>
+  <div class="post-wrap" id="main">
+    <a class="backlink" href="/">← Samarth Narang</a>
+
+    <header class="blog-head">
+      <p class="label"><b>writing</b></p>
+      <h1>Tiled Thoughts <span class="sub">— a verbose debug build</span></h1>
+      <p>
+        Compiler passes, ML systems, and the occasional detour. Long-form notes from the path
+        between code and silicon.
+      </p>
+    </header>
+
+    {[...byYear.entries()].map(([year, group]) => (
+      <>
+        <p class="year">{year}</p>
+        <ul class="posts">
+          {group.map((post) => (
+            <li>
+              <a href={`/tiled-thoughts/posts/${post.id}/`}>
+                <span class="when">{fmt(post.data.date)}</span>
+                <h3>{post.data.title} <span class="arrow">↗</span></h3>
+                <p>{post.data.description}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </>
+    ))}
+  </div>
+</Base>

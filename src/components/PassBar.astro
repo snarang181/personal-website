@@ -1,0 +1,15 @@
+---
+import { nav } from '../data/site';
+
+interface Props { home?: boolean }
+const { home = false } = Astro.props;
+const href = (id: string) => (home ? `#${id}` : `/#${id}`);
+---
+
+<nav class="passbar" aria-label="Sections">
+  <ol>
+    {nav.map((s) => (
+      <li><a href={href(s.id)} data-nav={s.id}>{s.label}</a></li>
+    ))}
+  </ol>
+</nav>
