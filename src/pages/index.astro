@@ -13,6 +13,26 @@ import { publications } from '../data/publications';
 import { patents } from '../data/patents';
 import { featured, apps, skills } from '../data/projects';
 
+const filedDates = patents
+  .map((p) => p.filed)
+  .filter((d): d is string => Boolean(d))
+  .sort();
+const monthOf = (iso: string) =>
+  new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const shortMonth = (iso: string) =>
+  new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+// Collapse the year when the whole range sits inside one: "May – September 2026"
+const filingRange = (() => {
+  if (filedDates.length === 0) return '';
+  const a = filedDates[0];
+  const b = filedDates.at(-1)!;
+  if (a === b) return monthOf(a);
+  const [ya, yb] = [a.slice(0, 4), b.slice(0, 4)];
+  const nameOf = (iso: string) =>
+    new Date(iso + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+  return ya === yb ? `${nameOf(a)} – ${nameOf(b)} ${ya}` : `${monthOf(a)} – ${monthOf(b)}`;
+})();
+
 const posts = (await getCollection('writing', ({ data }) => !data.draft))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
   .slice(0, 5);
@@ -116,7 +136,10 @@ const jsonLd = {
         <section id="patents" class="rv">
           <p class="label"><b>patents</b></p>
           <h2>Filed.</h2>
-          <p>{patents.length} US patent applications, all currently pending.</p>
+          <p>
+            {patents.length} US patent applications{filingRange && <>, filed {filingRange}</>}.
+            All currently pending.
+          </p>
           <ul class="patents">
             {patents.map((p) => (
               <li>
@@ -125,7 +148,11 @@ const jsonLd = {
                     ? <a class="inline-link" href={p.url} target="_blank" rel="noopener">{p.title}</a>
                     : p.title}
                 </span>
-                {p.number && <span class="no">{p.number}</span>}
+                <span class="no">
+                  {p.filed && <time datetime={p.filed}>{shortMonth(p.filed)}</time>}
+                  {p.filed && p.number && ' · '}
+                  {p.number}
+                </span>
               </li>
             ))}
           </ul>
