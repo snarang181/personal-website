@@ -5,3 +5,7 @@ dist/
 *.log
 .env
 .env.production
+
+# Overleaf project, cloned in as its own git repo. Never commit it here —
+# this repo is public and the paper source is not.
+paper/
