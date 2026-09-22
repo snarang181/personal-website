@@ -136,10 +136,7 @@ const jsonLd = {
         <section id="patents" class="rv">
           <p class="label"><b>patents</b></p>
           <h2>Filed.</h2>
-          <p>
-            {patents.length} US patent applications{filingRange && <>, filed {filingRange}</>}.
-            All currently pending.
-          </p>
+          <p>{patents.length} US patent applications{filingRange && <>, filed {filingRange}</>}.</p>
           <ul class="patents">
             {patents.map((p) => (
               <li>
