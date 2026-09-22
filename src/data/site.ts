@@ -21,13 +21,18 @@ export const site = {
   },
 } as const;
 
-export const nav = [
+import { patents } from './patents';
+
+const allNav = [
   { id: 'about', label: 'about', stage: '· who' },
   { id: 'experience', label: 'experience', stage: '· 4 yrs' },
   { id: 'education', label: 'education', stage: '· 2' },
   { id: 'publications', label: 'publications', stage: '· 3' },
+  { id: 'patents', label: 'patents', stage: '· filed' },
   { id: 'projects', label: 'projects', stage: '· 5' },
   { id: 'writing', label: 'writing', stage: '· blog' },
   { id: 'skills', label: 'skills', stage: '· stack' },
   { id: 'contact', label: 'contact', stage: '· hi' },
 ] as const;
+
+export const nav = allNav.filter((s) => s.id !== 'patents' || patents.length > 0);

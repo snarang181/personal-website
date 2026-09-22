@@ -307,6 +307,10 @@ strong{color:var(--text);font-weight:600}
   justify-self:start;
 }
 .pub .you{color:var(--text);font-weight:600}
+.pub .venue.filed{color:var(--muted);border-color:var(--line)}
+.pub .venue.published{color:var(--steel);border-color:rgba(127,168,217,.3)}
+.pub .venue.granted{color:var(--mint);border-color:rgba(143,208,160,.32)}
+.pub .patno{font-family:var(--mono);font-size:.8125em;color:var(--text-2)}
 
 /* ---------- projects ---------- */
 .feat{display:grid;gap:16px}

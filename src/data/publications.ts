@@ -2,12 +2,17 @@ export interface Publication {
   venue: string;
   title: string;
   authors: string;
-  url: string;
+  url?: string;
 }
 
 // Links restored from the previous site — the mockup dropped all three.
 // Normalised to arXiv /abs/ landing pages rather than direct /pdf/.
 export const publications: Publication[] = [
+  {
+    venue: 'HASP 2026',
+    title: 'kDuel: Characterizing SumCheck Prover Kernels across GPU Programming Models',
+    authors: '<span class="you">Samarth Narang</span>, Alhad Daftardar, Brandon Reagen',
+  },
   {
     venue: 'MLBench @ ASPLOS 2026',
     title: 'Analyzing Latency Hiding and Parallelism in an MLIR-based AI Kernel Compiler',
