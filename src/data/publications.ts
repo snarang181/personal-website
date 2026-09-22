@@ -10,7 +10,7 @@ export interface Publication {
 export const publications: Publication[] = [
   {
     venue: 'HASP 2026',
-    title: 'kDuel: Characterizing SumCheck Prover Kernels across GPU Programming Models',
+    title: 'zkDuel: Characterizing SumCheck Prover Kernels across GPU Programming Models',
     authors: '<span class="you">Samarth Narang</span>, Alhad Daftardar, Brandon Reagen',
   },
   {
