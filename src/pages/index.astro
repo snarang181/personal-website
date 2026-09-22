@@ -116,21 +116,16 @@ const jsonLd = {
         <section id="patents" class="rv">
           <p class="label"><b>patents</b></p>
           <h2>Filed.</h2>
-          <ul class="pubs">
+          <p>{patents.length} US patent applications, all currently pending.</p>
+          <ul class="patents">
             {patents.map((p) => (
-              <li class="pub">
-                <span class:list={['venue', p.status]}>
-                  {p.status} · {p.assignee} · {p.date}
-                </span>
-                <h3>
+              <li>
+                <span class="t">
                   {p.url
-                    ? <a href={p.url} target="_blank" rel="noopener">{p.title}</a>
+                    ? <a class="inline-link" href={p.url} target="_blank" rel="noopener">{p.title}</a>
                     : p.title}
-                </h3>
-                <p class="meta">
-                  <Fragment set:html={p.inventors} />
-                  {p.number && <> · <span class="patno">{p.number}</span></>}
-                </p>
+                </span>
+                {p.number && <span class="no">{p.number}</span>}
               </li>
             ))}
           </ul>

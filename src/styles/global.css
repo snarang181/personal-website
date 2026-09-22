@@ -312,6 +312,19 @@ strong{color:var(--text);font-weight:600}
 .pub .venue.granted{color:var(--mint);border-color:rgba(143,208,160,.32)}
 .pub .patno{font-family:var(--mono);font-size:.8125em;color:var(--text-2)}
 
+/* ---------- patents ---------- */
+.patents{list-style:none;margin:1.5rem 0 0;padding:0;display:flex;flex-direction:column}
+.patents li{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px 20px;flex-wrap:wrap;
+  padding:11px 0;border-bottom:1px solid var(--line-soft);
+}
+.patents li:first-child{border-top:1px solid var(--line-soft)}
+.patents .t{color:var(--text-2);font-size:.9375rem;line-height:1.45;max-width:62ch}
+.patents .no{
+  font-family:var(--mono);font-size:.75rem;color:var(--muted);
+  font-variant-numeric:tabular-nums;white-space:nowrap;flex:none;
+}
+
 /* ---------- projects ---------- */
 .feat{display:grid;gap:16px}
 .card{
