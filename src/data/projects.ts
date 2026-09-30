@@ -17,7 +17,7 @@ export const featured: FeaturedProject[] = [
   {
     title: 'LLVM & MLIR upstream',
     dialect: 'open source',
-    body: 'Ongoing contributor to the LLVM project — patches across MLIR, Clang, LLVM optimization passes and Flang.',
+    body: 'Ongoing contributor to the LLVM project. Patches across MLIR, Clang, LLVM optimization passes and Flang.',
     links: [
       {
         label: '→ View patches',
@@ -34,7 +34,7 @@ export const featured: FeaturedProject[] = [
   {
     title: 'YARROW',
     dialect: 'Verilog · Python',
-    body: 'An RTL debugging loop on top of <a class="inline-link" href="https://github.com/ucb-bar/chia">CHIA</a> that verifies a patch independently, then checks the agent\'s diagnosis against a simulation-derived first-divergence label. Built and accepted at the A³ CHIA hackathon, MICRO 2026.',
+    body: 'An RTL debugging loop on top of <a class="inline-link" href="https://github.com/ucb-bar/chia">CHIA</a> that verifies a patch independently, then checks the agent\'s diagnosis against a simulation-derived first-divergence label. Artifact for <em>Right Fix, Wrong Reason: Repair and Diagnosis in a CHIA RTL Debugging Loop</em>, accepted at the A³ Workshop CHIA hackathon, MICRO 2026.',
     links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/yarrow' }],
   },
   {
