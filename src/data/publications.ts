@@ -9,6 +9,11 @@ export interface Publication {
 // Normalised to arXiv /abs/ landing pages rather than direct /pdf/.
 export const publications: Publication[] = [
   {
+    venue: 'A³ Workshop @ MICRO 2026',
+    title: 'Right Fix, Wrong Reason: Repair and Diagnosis in a CHIA RTL Debugging Loop',
+    authors: '<span class="you">Samarth Narang</span>, Brandon Reagen',
+  },
+  {
     venue: 'HASP 2026',
     title: 'zkDuel: Characterizing SumCheck Prover Kernels across GPU Programming Models',
     authors: '<span class="you">Samarth Narang</span>, Alhad Daftardar, Brandon Reagen',
