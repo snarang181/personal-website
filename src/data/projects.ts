@@ -15,25 +15,6 @@ export interface AppProject {
 
 export const featured: FeaturedProject[] = [
   {
-    title: 'zkDuel',
-    dialect: 'Triton · CUDA · Python',
-    body: 'Artifact for the HASP 2026 paper. Matched Triton and CUDA implementations of the same SumCheck prover kernels over prime fields, plus the drivers that time and check them.',
-    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/zk-duel' }],
-  },
-  {
-    title: 'YARROW',
-    dialect: 'Verilog · Python',
-    body: 'An RTL debugging loop on top of <a class="inline-link" href="https://github.com/ucb-bar/chia">CHIA</a> that verifies a patch independently, then checks the agent\'s diagnosis against a simulation-derived first-divergence label. Built at the A³ CHIA hackathon, MICRO 2026.',
-    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/yarrow' }],
-  },
-  {
-    title: 'Microtick',
-    dialect: 'MLIR · LLVM · C++',
-    body: 'An experimental MLIR dialect for high-frequency trading strategies, lowered end to end into a shared library a C++ engine runs against a toy market.',
-    ops: ['tick.on_book', 'tick.order.send', 'tick.order.cancel', 'tick.risk.*'],
-    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/microtick' }],
-  },
-  {
     title: 'LLVM & MLIR upstream',
     dialect: 'open source',
     body: 'Ongoing contributor to the LLVM project — patches across MLIR, Clang, LLVM optimization passes and Flang.',
@@ -43,6 +24,25 @@ export const featured: FeaturedProject[] = [
         href: 'https://github.com/llvm/llvm-project/commits/main?author=snarang181',
       },
     ],
+  },
+  {
+    title: 'zkDuel',
+    dialect: 'Triton · CUDA · Python',
+    body: 'Artifact for the HASP 2026 paper. Matched Triton and CUDA implementations of the same SumCheck prover kernels over prime fields, plus the drivers that time and check them.',
+    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/zk-duel' }],
+  },
+  {
+    title: 'YARROW',
+    dialect: 'Verilog · Python',
+    body: 'An RTL debugging loop on top of <a class="inline-link" href="https://github.com/ucb-bar/chia">CHIA</a> that verifies a patch independently, then checks the agent\'s diagnosis against a simulation-derived first-divergence label. Built and accepted at the A³ CHIA hackathon, MICRO 2026.',
+    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/yarrow' }],
+  },
+  {
+    title: 'Microtick',
+    dialect: 'MLIR · LLVM · C++',
+    body: 'An experimental MLIR dialect for high-frequency trading strategies, lowered end to end into a shared library a C++ engine runs against a toy market.',
+    ops: ['tick.on_book', 'tick.order.send', 'tick.order.cancel', 'tick.risk.*'],
+    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/microtick' }],
   },
 ];
 
