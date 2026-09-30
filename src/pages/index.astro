@@ -186,8 +186,13 @@ const jsonLd = {
             <li>
               <div class="row"><h3>{a.title}</h3><span class="stack">{a.stack}</span></div>
               <p>
-                <Fragment set:html={a.body} />{' '}
-                <a class="inline-link" href={a.link.href} target="_blank" rel="noopener">{a.link.label}</a>
+                <Fragment set:html={a.body} />
+                {a.link && (
+                  <>
+                    {' '}
+                    <a class="inline-link" href={a.link.href} target="_blank" rel="noopener">{a.link.label}</a>
+                  </>
+                )}
               </p>
             </li>
           ))}

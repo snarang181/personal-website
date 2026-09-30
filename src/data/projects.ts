@@ -10,21 +10,33 @@ export interface AppProject {
   title: string;
   stack: string;
   body: string;
-  link: { label: string; href: string };
+  link?: { label: string; href: string };
 }
 
 export const featured: FeaturedProject[] = [
   {
+    title: 'zkDuel',
+    dialect: 'Triton · CUDA · Python',
+    body: 'Artifact for the HASP 2026 paper. Matched Triton and CUDA implementations of the same SumCheck prover kernels over prime fields, plus the drivers that time and check them.',
+    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/zk-duel' }],
+  },
+  {
+    title: 'YARROW',
+    dialect: 'Verilog · Python',
+    body: 'An RTL debugging loop on top of <a class="inline-link" href="https://github.com/ucb-bar/chia">CHIA</a> that verifies a patch independently, then checks the agent\'s diagnosis against a simulation-derived first-divergence label. Built at the A³ CHIA hackathon, MICRO 2026.',
+    links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/yarrow' }],
+  },
+  {
     title: 'Microtick',
     dialect: 'MLIR · LLVM · C++',
-    body: 'An experimental domain-specific language for high-frequency trading strategies, built on MLIR. A custom <code>tick</code> dialect plus an end-to-end lowering pipeline that takes strategy IR down to a shared library a C++ engine can <code>dlopen</code> and run against a toy market with fills, positions, and P&amp;L.',
+    body: 'An experimental MLIR dialect for high-frequency trading strategies, lowered end to end into a shared library a C++ engine runs against a toy market.',
     ops: ['tick.on_book', 'tick.order.send', 'tick.order.cancel', 'tick.risk.*'],
     links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/microtick' }],
   },
   {
     title: 'LLVM & MLIR upstream',
     dialect: 'open source',
-    body: 'Ongoing contributor to the LLVM project — patches across MLIR, Clang, LLVM optimization passes, and Flang.',
+    body: 'Ongoing contributor to the LLVM project — patches across MLIR, Clang, LLVM optimization passes and Flang.',
     links: [
       {
         label: '→ View patches',
@@ -38,22 +50,12 @@ export const apps: AppProject[] = [
   {
     title: 'CaptureMyHippo',
     stack: 'Flutter · Flask · AWS Lambda · DynamoDB',
-    body: 'A non-conventional social app for recording memories for family and loved ones, on a serverless AWS backend.',
-    link: {
-      label: 'App Store',
-      href: 'https://apps.apple.com/us/app/capturemyhippo/id1631258770',
-    },
-  },
-  {
-    title: 'NoFinishLine',
-    stack: 'Flutter · Flask · AWS · Boto3',
-    body: 'iOS workout tracker over a searchable exercise database with levels, categories, and instructions, backed by a RESTful API.',
-    link: { label: 'GitHub', href: 'https://github.com/snarang181/NoFinishLineApp' },
+    body: 'A social app for recording memories for family, on a serverless AWS backend.',
   },
   {
     title: 'CryptoPriceAlert',
     stack: 'Flutter · Flask · Firebase',
-    body: 'Price alerts for crypto traders, wired into major exchange APIs for real-time data.',
+    body: 'Price alerts for crypto traders, wired into exchange APIs for real-time data.',
     link: {
       label: 'App Store',
       href: 'https://apps.apple.com/us/app/crypto-price-alerts-widgets/id1614911718',
