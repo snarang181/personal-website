@@ -28,7 +28,7 @@ export const featured: FeaturedProject[] = [
   {
     title: 'zkDuel',
     dialect: 'Triton · CUDA · Python',
-    body: 'Artifact for the HASP 2026 paper. Matched Triton and CUDA implementations of the same SumCheck prover kernels over prime fields, plus the drivers that time and check them.',
+    body: 'Artifact for the <a class="inline-link" href="https://dl.acm.org/doi/10.1145/3857307.3857312">HASP 2026 paper</a>. Matched Triton and CUDA implementations of the same SumCheck prover kernels over prime fields, plus the drivers that time and check them.',
     links: [{ label: '→ GitHub', href: 'https://github.com/snarang181/zk-duel' }],
   },
   {
