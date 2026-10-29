@@ -126,7 +126,15 @@ const jsonLd = {
                   ? <a href={p.url} target="_blank" rel="noopener">{p.title}</a>
                   : p.title}
               </h3>
-              <p class="meta" set:html={p.authors} />
+              <p class="meta">
+                <Fragment set:html={p.authors} />
+                {p.code && (
+                  <>
+                    {' · '}
+                    <a class="inline-link" href={p.code} target="_blank" rel="noopener">Code</a>
+                  </>
+                )}
+              </p>
             </li>
           ))}
         </ul>

@@ -3,6 +3,8 @@ export interface Publication {
   title: string;
   authors: string;
   url?: string;
+  /** Artifact / code repository, when there is one. */
+  code?: string;
 }
 
 // Links restored from the previous site — the mockup dropped all three.
@@ -17,7 +19,8 @@ export const publications: Publication[] = [
     venue: 'HASP 2026',
     title: 'zkDuel: Characterizing SumCheck Prover Kernels across GPU Programming Models',
     authors: '<span class="you">Samarth Narang</span>, Alhad Daftardar, Brandon Reagen',
-    url: 'https://dl.acm.org/doi/10.1145/3857307.3857312',
+    url: 'https://doi.org/10.1145/3857307.3857312',
+    code: 'https://github.com/snarang181/zk-duel',
   },
   {
     venue: 'MLBench @ ASPLOS 2026',
