@@ -21,7 +21,7 @@ export const publications: Publication[] = [
     venue: 'HASP 2026',
     title: 'zkDuel: Characterizing SumCheck Prover Kernels across GPU Programming Models',
     authors: '<span class="you">Samarth Narang</span>, Alhad Daftardar, Brandon Reagen',
-    url: 'https://doi.org/10.1145/3857307.3857312',
+    url: 'https://dl.acm.org/doi/full/10.1145/3857307.3857312',
     code: 'https://github.com/snarang181/zk-duel',
     award: 'Best Paper Nominee',
   },
