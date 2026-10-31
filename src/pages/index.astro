@@ -120,7 +120,10 @@ const jsonLd = {
         <ul class="pubs">
           {publications.map((p) => (
             <li class="pub">
-              <span class="venue">{p.venue}</span>
+              <span class="chips-row">
+                <span class="venue">{p.venue}</span>
+                {p.award && <span class="venue award">{p.award}</span>}
+              </span>
               <h3>
                 {p.url
                   ? <a href={p.url} target="_blank" rel="noopener">{p.title}</a>

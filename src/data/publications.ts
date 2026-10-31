@@ -5,6 +5,8 @@ export interface Publication {
   url?: string;
   /** Artifact / code repository, when there is one. */
   code?: string;
+  /** e.g. a best-paper nomination. Rendered as an accent chip. */
+  award?: string;
 }
 
 // Links restored from the previous site — the mockup dropped all three.
@@ -21,6 +23,7 @@ export const publications: Publication[] = [
     authors: '<span class="you">Samarth Narang</span>, Alhad Daftardar, Brandon Reagen',
     url: 'https://doi.org/10.1145/3857307.3857312',
     code: 'https://github.com/snarang181/zk-duel',
+    award: 'Best Paper Nominee',
   },
   {
     venue: 'MLBench @ ASPLOS 2026',
