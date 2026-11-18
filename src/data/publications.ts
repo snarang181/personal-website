@@ -13,9 +13,29 @@ export interface Publication {
 // Normalised to arXiv /abs/ landing pages rather than direct /pdf/.
 export const publications: Publication[] = [
   {
+    venue: 'Preprint · 2026',
+    title: 'Understudy: Putting GPU Fault Stalls to Work',
+    authors: '<span class="you">Samarth Narang</span>, Aamer Jaleel, Brandon Reagen',
+    url: '/papers/narang-understudy-2026.pdf',
+  },
+  {
+    venue: 'Preprint · 2026',
+    title: 'Pack Light, Walk Fast: Compact Page-Table Residency in Shared Caches',
+    authors: '<span class="you">Samarth Narang</span>, Aamer Jaleel, Brandon Reagen',
+    url: '/papers/narang-leafpack-2026.pdf',
+  },
+  {
+    venue: 'Preprint · 2026',
+    title: 'CIVIC: Checking Index Lowering in Machine Learning Compilers',
+    authors: '<span class="you">Samarth Narang</span>, Brandon Reagen',
+    url: '/papers/narang-civic-2026.pdf',
+  },
+  {
     venue: 'A³ Workshop @ MICRO 2026',
     title: 'Right Fix, Wrong Reason: Repair and Diagnosis in a CHIA RTL Debugging Loop',
     authors: '<span class="you">Samarth Narang</span>, Brandon Reagen',
+    url: '/papers/narang-right-fix-wrong-reason-micro26.pdf',
+    code: 'https://github.com/snarang181/yarrow',
   },
   {
     venue: 'HASP 2026',

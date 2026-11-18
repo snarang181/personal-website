@@ -22,12 +22,13 @@ export const site = {
 } as const;
 
 import { patents } from './patents';
+import { publications } from './publications';
 
 const allNav: { id: string; label: string; stage: string }[] = [
   { id: 'about', label: 'about', stage: '· who' },
   { id: 'experience', label: 'experience', stage: '· 4 yrs' },
   { id: 'education', label: 'education', stage: '· 2' },
-  { id: 'publications', label: 'publications', stage: '· 3' },
+  { id: 'publications', label: 'publications', stage: `· ${publications.length}` },
   { id: 'patents', label: 'patents', stage: `· ${patents.length}` },
   { id: 'projects', label: 'projects', stage: '· 5' },
   { id: 'writing', label: 'writing', stage: '· blog' },
