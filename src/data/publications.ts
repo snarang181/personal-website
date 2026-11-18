@@ -13,19 +13,19 @@ export interface Publication {
 // Normalised to arXiv /abs/ landing pages rather than direct /pdf/.
 export const publications: Publication[] = [
   {
-    venue: 'Preprint · 2026',
+    venue: 'Submitted to ISCA 2027',
     title: 'Understudy: Putting GPU Fault Stalls to Work',
     authors: '<span class="you">Samarth Narang</span>, Aamer Jaleel, Brandon Reagen',
     url: '/papers/narang-understudy-2026.pdf',
   },
   {
-    venue: 'Preprint · 2026',
+    venue: 'Submitted to ISCA 2027',
     title: 'Pack Light, Walk Fast: Compact Page-Table Residency in Shared Caches',
     authors: '<span class="you">Samarth Narang</span>, Aamer Jaleel, Brandon Reagen',
     url: '/papers/narang-leafpack-2026.pdf',
   },
   {
-    venue: 'Preprint · 2026',
+    venue: 'Submitted to MLSys 2027',
     title: 'CIVIC: Checking Index Lowering in Machine Learning Compilers',
     authors: '<span class="you">Samarth Narang</span>, Brandon Reagen',
     url: '/papers/narang-civic-2026.pdf',
