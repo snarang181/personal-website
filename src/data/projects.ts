@@ -15,6 +15,12 @@ export interface AppProject {
 
 export const featured: FeaturedProject[] = [
   {
+    title: 'Linux kernel',
+    dialect: 'mm · IOMMU · C',
+    body: 'Upstream contributor to the memory-management and IOMMU subsystems. Fixes to KSM page merging, transparent-huge-page aging under MADV_COLD, and IOMMU dirty tracking.',
+    links: [{ label: '→ View commits', href: 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/log/?qt=grep&q=samarth.colleges%40gmail.com' }],
+  },
+  {
     title: 'LLVM & MLIR upstream',
     dialect: 'open source',
     body: 'Ongoing contributor to the LLVM project. Patches across MLIR, Clang, LLVM optimization passes and Flang.',
